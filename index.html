@@ -27,11 +27,10 @@
   button{font-family:inherit;color:inherit;}
   #stage{flex:1;min-height:0;position:relative;overflow:hidden;}
   #stage canvas#gl{display:block;width:100%;height:100%;touch-action:none;}
-  #caption{position:absolute;left:12px;right:calc(var(--pw) + 36px);top:10px;min-height:calc(3.8em + 20px);background:rgba(255,255,255,.93);border:3px solid #1c2b3a;
-    border-radius:16px;padding:6px 16px 8px;font-weight:700;font-size:clamp(16px,2.25vw,27px);line-height:1.9;pointer-events:none;}
+  #caption{position:absolute;left:12px;top:10px;width:fit-content;max-width:calc(100% - var(--pw) - 48px);background:rgba(255,255,255,.93);border:3px solid #1c2b3a;
+    border-radius:16px;padding:6px 16px 8px;font-weight:700;font-size:clamp(16px,2.25vw,27px);line-height:1.8;pointer-events:none;}
   #helpBtn{position:absolute;right:12px;top:10px;width:54px;height:54px;border-radius:50%;border:3px solid #1c2b3a;background:#ffd84d;
     font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;}
-  #viewBtn{align-self:center;pointer-events:auto;min-height:52px;padding:0 18px;border-radius:26px;border:3px solid #1c2b3a;background:#fff;
     font-size:19px;font-weight:700;line-height:1.7;white-space:nowrap;}
   #ver{position:absolute;left:12px;bottom:6px;font-size:11px;color:#1c2b3a;opacity:.6;pointer-events:none;}
 
@@ -45,13 +44,13 @@
 
   #bar{background:#f2faff;border-top:3px solid #1c2b3a;padding:8px 10px;display:flex;gap:8px;align-items:center;}
   #bar button{min-height:56px;min-width:56px;border-radius:14px;border:3px solid #1c2b3a;background:#bfe6ff;font-size:19px;font-weight:700;padding:0 14px;line-height:1.6;white-space:nowrap;}
-  #bar button:active,#viewBtn:active{transform:translateY(2px);filter:brightness(.95);}
+  #bar button:active{transform:translateY(2px);filter:brightness(.95);}
   #scrubWrap{flex:1;min-width:80px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;white-space:nowrap;}
   input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;margin:0;touch-action:none;}
   input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:#fff;border:2px solid #1c2b3a;}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:36px;height:36px;border-radius:50%;background:#ffd84d;border:3px solid #1c2b3a;margin-top:-14px;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:36px;height:36px;border-radius:50%;background:#bfe6ff;border:3px solid #1c2b3a;margin-top:-14px;}
   input[type=range]::-moz-range-track{height:12px;border-radius:6px;background:#fff;border:2px solid #1c2b3a;}
-  input[type=range]::-moz-range-thumb{width:32px;height:32px;border-radius:50%;background:#ffd84d;border:3px solid #1c2b3a;}
+  input[type=range]::-moz-range-thumb{width:32px;height:32px;border-radius:50%;background:#bfe6ff;border:3px solid #1c2b3a;}
 
   #help{position:fixed;inset:0;background:rgba(20,35,55,.72);display:flex;align-items:center;justify-content:center;z-index:10;padding:12px;}
   #help.hide{display:none;}
@@ -66,7 +65,7 @@
 </style>
 </head>
 <body>
-<!-- build: 2026-11-10c -->
+<!-- build: 2026-11-10d -->
 <div id="stage">
   <div id="caption"></div>
   <button id="helpBtn" aria-label="せつめい">？</button>
@@ -76,7 +75,6 @@
       <canvas id="thermo" width="80" height="190" style="width:80px;height:190px"></canvas>
       <div id="thermoSide"><span class="hot">あたたかい</span><span class="cold">つめたい</span></div>
     </div>
-    <button id="viewBtn"><ruby>視点<rt>してん</rt></ruby>もどす</button>
   </div>
   <div id="ver"></div>
 </div>
@@ -86,6 +84,7 @@
   <button id="nextBtn"><ruby>次<rt>つぎ</rt></ruby>へ ⏭</button>
   <div id="scrubWrap"><span><ruby>動<rt>うご</rt></ruby>かす</span><input type="range" id="scrub" min="0" max="1000" value="0"></div>
   <button id="muteBtn" aria-label="音">🔊</button>
+  <button id="viewBtn"><ruby>視点<rt>してん</rt></ruby>もどす</button>
 </div>
 
 <div id="help">
@@ -109,13 +108,12 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* ===================== 設定（ここの数値だけ直せば調整できます） ===================== */
 const CFG = {
-  version: 'v2026-11-10c',
+  version: 'v2026-11-10d',
   groundTemp: 25,              // 地上の気温（℃）
   dryLapse: 1.0,               // 雲ができるまで：100mで何℃下がるか
   wetLapse: 0.5,               // 雲ができてから：100mで何℃下がるか
   humidity: 55,                // 地上の湿度（%）
   mountain: 2000,              // 山の高さ（m）
-  topExtra: 300,               // 山頂からさらに上がる高さ（m）
   rainDepth: 600,              // 雲ができた高さから何m上がると雨になるか
   duration: 34,                // 自動で最初から最後まで進む秒数
   stepSpeed: 1.7,              // 「次へ」で進むときの速さ（自動の何倍か）
@@ -147,21 +145,20 @@ const S = {
 /* ===================== 地形と経路（奥行きは以前の半分。山の向こう側の奥は、くぼみで切ってある） ===================== */
 const XS=-37, XP=8, WL=30, WR=24, ZP=2;           // 出発x, 山頂x, 山の左右の幅（進む向き）, 空気のかたまりのz
 const XF=XP-WL;                                   // ふもと
-const PA=0.12, PB=0.9;                            // 経路の区切り（海の上→のぼり→山頂の上）
+const PA=0.12;                                    // 経路の区切り（海の上→山をのぼる。山頂がゴール）
 const TX0=-46, TX1=38, TZ0=-14, TZ1=8;            // 地形の範囲（奥行きは 22 ＝ 以前の半分）
 function prof(x){const d=x<XP?(XP-x)/WL:(x-XP)/WR;return d>=1?0:0.5*(1+Math.cos(Math.PI*d));}
 function terrainH(x,z){ // ワールド単位（1 = 100m）。奥の端（TZ0）に向かってなだらかに低くなる
   const back=smooth(TZ0,TZ0+5,z);
   return Math.max(0,S.mountain/100*prof(x)*back);
 }
-function pathAt(p){ // 進みぐあい p(0〜1) → x と 高さh(m)
-  const M=S.mountain;
+function pathAt(p){ // 進みぐあい p(0〜1) → x と 高さh(m)。p=1 が山頂
   if(p<PA) return {x:lerp(XS,XF,p/PA),h:0};
-  if(p<PB){const x=lerp(XF,XP,(p-PA)/(PB-PA));return {x,h:M*prof(x)};}
-  const u=(p-PB)/(1-PB);return {x:XP+u*1.5,h:M+CFG.topExtra*u};
+  const x=lerp(XF,XP,(p-PA)/(1-PA));
+  return {x,h:S.mountain*prof(x)};
 }
 function pForH(h){let a=0,b=1;for(let i=0;i<30;i++){const m=(a+b)/2;if(pathAt(m).h>=h)b=m;else a=m;}return b;}
-const topH=()=>S.mountain+CFG.topExtra;
+const topH=()=>S.mountain;
 
 function recalcAir(){
   S.vapor=sat(CFG.groundTemp)*S.humidity/100;
@@ -201,12 +198,12 @@ controls.enablePan=false; controls.enableDamping=true; controls.dampingFactor=0.
 controls.minPolarAngle=THREE.MathUtils.degToRad(58); controls.maxPolarAngle=THREE.MathUtils.degToRad(88);
 controls.minAzimuthAngle=-0.6; controls.maxAzimuthAngle=0.6;
 /* 画面いっぱいに空を描き、右のパネルは空の上に重ねる（右の山のふもとは低いのでパネルと重ならない）。景色は説明文（上）をよけて、できるだけ大きく置く */
-const VIEW={cx:-4,w:88,top:37,bottom:-4.5,botPad:50};   // 景色の中心x・横幅・上端・下端（ワールド単位）と、下の余白(px)
+const VIEW={cx:-4,w:88,top:37,bottom:-4.5,botPad:36};   // 景色の中心x・横幅・上端・下端（ワールド単位）と、下の余白(px)
 function fitView(){
   const w=stageEl.clientWidth||800,h=stageEl.clientHeight||600;
   renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
   const fs=parseFloat(getComputedStyle(capEl).fontSize)||24;
-  const capH=3.8*fs+20+10+8;                       // 説明文の高さ（2行ぶん固定）＋すきま
+  const capH=(w<900?2:1)*1.8*fs+20+10+8;           // 説明文の高さ（ふつうは1行ぶん）＋すきま
   const avail=h-capH-VIEW.botPad, units=VIEW.top-VIEW.bottom;
   const ppu=Math.min((w-16)/VIEW.w,avail/units);   // 1ワールド単位が何pxか
   const extra=Math.max(0,avail-units*ppu);          // 縦にあまった分は上下半分ずつ（景色を少し上へ）
@@ -306,7 +303,6 @@ function shapeBlob(t,ca){   // ゆるやかにゆれる塊。雲になるほど�
 }
 function parcelPos(r){   // 斜面にめりこまないよう、斜面の法線方向に少しはなして置く
   const pt=pathAt(S.p),off=r*1.05+0.3;
-  if(S.p>=PB)return {x:pt.x,y:pt.h/100+off};
   const s=(terrainH(pt.x+0.15,ZP)-terrainH(pt.x-0.15,ZP))/0.3,n=Math.sqrt(1+s*s);
   return {x:pt.x-s/n*off,y:pt.h/100+off/n};
 }
@@ -315,7 +311,7 @@ function parcelPos(r){   // 斜面にめりこまないよう、斜面の法線�
 const rain=new THREE.InstancedMesh(new THREE.BoxGeometry(0.13,1,0.13),new THREE.MeshBasicMaterial({color:0x2f6fe0}),CFG.rainDrops);
 rain.instanceMatrix.setUsage(THREE.DynamicDrawUsage);rain.frustumCulled=false;scene.add(rain);
 const drops=[];{const r=seeded(41);for(let i=0;i<CFG.rainDrops;i++)drops.push({u:r(),zz:r()*2-1,ph:r(),sp:0.9+r()*0.6});}
-// 風：海から山へふく向きを、大きな矢印（ゆっくり右へ進んで消える）で見せる
+// 風：海から山へふく向きを、大きな矢印で見せる
 const windArrows=[];
 [[12.2,0.15],[15.7,0.6]].forEach(([y,ph])=>{
   const mat=new THREE.MeshBasicMaterial({color:0x3b86e0,transparent:true,opacity:0.9,depthWrite:false}),g=new THREE.Group();
@@ -347,9 +343,9 @@ const sCloud=()=>{tone(784,0.5,0.14);tone(1047,0.6,0.14,'sine',0.12);tone(1319,0
 const R=(k,r)=>`<ruby>${k}<rt>${r}</rt></ruby>`;
 function captionHTML(){
   switch(S.stage){
-    case 0:return `${R('海','うみ')}の${R('上','うえ')}の${R('空気','くうき')}には、${R('目','め')}に${R('見','み')}えない${R('水蒸気','すいじょうき')}がたくさんふくまれています。`;
+    case 0:return `${R('海','うみ')}の${R('上','うえ')}の${R('空気','くうき')}には、${R('目','め')}に${R('見','み')}えない${R('水蒸気','すいじょうき')}がたくさんあります。`;
     case 1:return `${R('風','かぜ')}で${R('山','やま')}にそって${R('上','あ')}がると、${R('空気','くうき')}はふくらんで、${R('温度','おんど')}が${R('下','さ')}がります。`;
-    case 2:return `${R('冷','ひ')}えると、${R('水蒸気','すいじょうき')}が${R('小','ちい')}さな${R('水','みず')}のつぶになります。${R('空気','くうき')}のかたまりが、そのまま${R('雲','くも')}になります。`;
+    case 2:return `${R('冷','ひ')}えると${R('水蒸気','すいじょうき')}が${R('水','みず')}のつぶになり、${R('空気','くうき')}のかたまりが${R('雲','くも')}になります。`;
     case 3:return `${R('雲','くも')}のつぶが${R('大','おお')}きくなると、${R('雨','あめ')}になって${R('落','お')}ちてきます。`;
     default:return `${R('露点','ろてん')}まで${R('温度','おんど')}が${R('下','さ')}がらなかったので、${R('雲','くも')}はできなかった。`;
   }
@@ -415,9 +411,9 @@ function updateVisuals(dt){
     rain.count=nR;rain.instanceMatrix.needsUpdate=true;
   }
   if(rainGain&&AC)rainGain.gain.setTargetAtTime(0.1*ra,AC.currentTime,0.2);
-  // 風の矢印
-  windArrows.forEach(g=>{const u=g.userData,ph=(t*0.16+u.ph)%1;
-    g.position.set(-41.5+ph*4,u.y,5);u.mat.opacity=0.92*Math.min(1,Math.sin(Math.PI*ph)*2.2);});
+  // 風の矢印（海から山のふもと・斜面の近くまで進んで、すうっと消える）
+  windArrows.forEach(g=>{const u=g.userData,ph=(t*0.075+u.ph)%1;
+    g.position.set(lerp(-41.5,-10,ph),u.y,5);u.mat.opacity=0.92*Math.min(1,Math.sin(Math.PI*ph)*2.2);});
 }
 
 /* ===================== 操作 ===================== */
