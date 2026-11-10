@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>雲のでき方</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;}
+  body{font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",sans-serif;background:#eaf4fb;color:#1c2b3a;
+    touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+    display:flex;flex-direction:column;}
+  rt{font-size:.5em;font-weight:400;}
+  button{font-family:inherit;color:inherit;}
+  #main{flex:1;min-height:0;display:flex;}
+  #stage{flex:1;min-width:0;position:relative;overflow:hidden;}
+  #stage canvas{display:block;width:100%;height:100%;touch-action:none;}
+  #caption{position:absolute;left:12px;right:76px;top:10px;background:rgba(255,255,255,.93);border:3px solid #1c2b3a;
+    border-radius:16px;padding:6px 16px 8px;font-weight:700;font-size:clamp(17px,2.5vw,30px);line-height:1.9;pointer-events:none;}
+  #helpBtn,#viewBtn{position:absolute;right:12px;width:54px;height:54px;border-radius:50%;border:3px solid #1c2b3a;background:#fff;
+    font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;}
+  #helpBtn{top:10px;background:#ffd84d;}
+  #viewBtn{bottom:10px;font-size:22px;}
+  #legend{position:absolute;left:12px;bottom:10px;background:rgba(255,255,255,.9);border-radius:12px;padding:6px 12px;
+    font-size:clamp(13px,1.5vw,17px);line-height:2;pointer-events:none;border:2px solid #1c2b3a;display:flex;flex-wrap:wrap;gap:0 18px;max-width:calc(100% - 150px);}
+  #legend .dot{display:inline-block;border-radius:50%;vertical-align:middle;margin-right:6px;border:2px solid #1c2b3a;}
+  #legend .arr{display:inline-block;color:#d9480f;font-weight:700;margin-right:6px;}
+  #ver{position:absolute;right:74px;bottom:12px;font-size:11px;color:#1c2b3a;opacity:.6;pointer-events:none;}
+
+  #panel{width:250px;background:#fff;border-left:3px solid #1c2b3a;padding:10px 12px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;}
+  #status{font-weight:700;font-size:21px;text-align:center;border:3px solid #1c2b3a;border-radius:12px;padding:4px 4px;line-height:1.8;background:#fff7d6;}
+  #status.s2{background:#e3f1ff;} #status.s3{background:#cfd9e6;}
+  #thermoRow{display:flex;align-items:center;justify-content:center;gap:8px;}
+  #thermoSide{display:flex;flex-direction:column;justify-content:space-between;height:150px;font-weight:700;font-size:17px;}
+  #thermoSide .hot{color:#d9480f;} #thermoSide .cold{color:#1c6fd1;}
+  #tempNum{font-size:34px;font-weight:700;text-align:center;line-height:1.1;}
+  .row{display:flex;justify-content:space-between;align-items:baseline;font-size:17px;border-bottom:2px dashed #b9c6d3;padding:1px 0;line-height:1.9;}
+  .row b{font-size:22px;}
+  #bar2{background:#33485e;color:#fff;padding:2px 12px;gap:22px;}
+  body.detail #bar2{display:flex !important;}
+  .sl{flex:1;display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;line-height:1.8;white-space:nowrap;}
+  .sl b{font-size:19px;min-width:76px;text-align:right;}
+  #bar2 input::-webkit-slider-runnable-track{background:#5d7186;border-color:#fff;}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;margin:0;touch-action:none;}
+  input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:#b9c6d3;border:2px solid #1c2b3a;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:36px;height:36px;border-radius:50%;background:#ffd84d;border:3px solid #1c2b3a;margin-top:-14px;}
+  input[type=range]::-moz-range-track{height:12px;border-radius:6px;background:#b9c6d3;border:2px solid #1c2b3a;}
+  input[type=range]::-moz-range-thumb{width:32px;height:32px;border-radius:50%;background:#ffd84d;border:3px solid #1c2b3a;}
+  #cupTitle{font-size:14px;font-weight:700;line-height:1.7;}
+  #cupLegend{font-size:14px;line-height:1.8;}
+  #cupLegend i{display:inline-block;width:14px;height:14px;border:2px solid #1c2b3a;vertical-align:middle;margin-right:4px;}
+  .detailOnly{display:none !important;}
+  body.detail .detailOnly{display:revert !important;}
+  body.detail .row.detailOnly{display:flex !important;}
+  body.detail .easyOnly{display:none !important;}
+
+  #bar{background:#1c2b3a;padding:8px 10px;display:flex;gap:8px;align-items:center;}
+  #bar button{min-height:56px;min-width:56px;border-radius:14px;border:3px solid #fff;background:#fff;font-size:19px;font-weight:700;padding:0 12px;line-height:1.5;white-space:nowrap;}
+  #bar button#nextBtn{background:#ffd84d;}
+  #bar button#playBtn{background:#9be29b;}
+  #scrubWrap{flex:1;min-width:80px;display:flex;align-items:center;gap:8px;color:#fff;font-weight:700;font-size:15px;white-space:nowrap;}
+  #scrubWrap input::-webkit-slider-runnable-track{background:#5d7186;border-color:#fff;}
+
+  #help{position:fixed;inset:0;background:rgba(20,35,55,.72);display:flex;align-items:center;justify-content:center;z-index:10;padding:12px;}
+  #help.hide{display:none;}
+  #helpCard{background:#fff;border:4px solid #1c2b3a;border-radius:22px;max-width:760px;width:100%;max-height:100%;overflow:auto;padding:14px 22px 18px;}
+  #helpCard h1{margin:0 0 4px;font-size:clamp(24px,4vw,36px);text-align:center;line-height:1.8;}
+  #helpCard p{margin:2px 0;font-size:clamp(15px,2vw,19px);line-height:2;}
+  .how{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center;margin:6px 0 8px;font-size:clamp(15px,2vw,19px);line-height:1.9;}
+  .how .ic{min-width:64px;height:44px;border:3px solid #1c2b3a;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;padding:0 8px;background:#fff;white-space:nowrap;}
+  .lvRow{display:flex;gap:12px;margin:8px 0 12px;}
+  .lvRow button{flex:1;min-height:64px;border-radius:16px;border:3px solid #1c2b3a;background:#fff;font-size:20px;font-weight:700;line-height:1.5;opacity:.55;}
+  .lvRow button small{display:block;font-size:13px;font-weight:400;}
+  .lvRow button.on{background:#ffd84d;opacity:1;box-shadow:0 4px 0 #1c2b3a;}
+  #startBtn{display:block;margin:0 auto;min-width:240px;min-height:64px;border-radius:32px;border:4px solid #1c2b3a;background:#4cc36a;color:#fff;font-size:26px;font-weight:700;line-height:1.6;}
+
+  @media (orientation:portrait){
+    #main{flex-direction:column;}
+    #panel{width:auto;border-left:none;border-top:3px solid #1c2b3a;flex-direction:row;flex-wrap:wrap;align-items:center;max-height:38%;overflow:auto;}
+    #panel>*{flex:1 1 200px;}
+  }
+</style>
+</head>
+<body>
+<!-- build: 2026-11-10 -->
+<div id="main">
+  <div id="stage">
+    <div id="caption"></div>
+    <button id="helpBtn" aria-label="せつめい">？</button>
+    <button id="viewBtn" aria-label="視点をもどす">🎥</button>
+    <div id="legend">
+      <div><span class="dot" style="width:14px;height:14px;background:#2f6bff"></span><ruby>水蒸気<rt>すいじょうき</rt></ruby>（<ruby>本当<rt>ほんとう</rt></ruby>は<ruby>見<rt>み</rt></ruby>えない）</div>
+      <div><span class="dot" style="width:18px;height:18px;background:#fff"></span><ruby>水<rt>みず</rt></ruby>のつぶ<span class="detailOnly">（<ruby>水滴<rt>すいてき</rt></ruby>）</span></div>
+      <div><span class="arr">➡</span>まわりの<ruby>空気<rt>くうき</rt></ruby>がおす<ruby>力<rt>ちから</rt></ruby><span class="detailOnly">（<ruby>気圧<rt>きあつ</rt></ruby>）</span></div>
+    </div>
+    <div id="ver"></div>
+  </div>
+  <div id="panel">
+    <div id="status"></div>
+    <div>
+      <div id="thermoRow">
+        <canvas id="thermo" width="90" height="170" style="width:90px;height:170px"></canvas>
+        <div id="thermoSide" class="easyOnly"><span class="hot">あたたかい</span><span class="cold">つめたい</span></div>
+        <div class="detailOnly">
+          <div style="font-size:16px;font-weight:700;text-align:center"><ruby>気温<rt>きおん</rt></ruby></div>
+          <div id="tempNum"></div>
+        </div>
+      </div>
+    </div>
+    <div class="detailOnly">
+      <div class="row detailOnly"><span><ruby>高<rt>たか</rt></ruby>さ</span><b id="hNum"></b></div>
+      <div class="row detailOnly"><span><ruby>湿度<rt>しつど</rt></ruby></span><b id="rhNum"></b></div>
+      <div class="row detailOnly"><span><ruby>露点<rt>ろてん</rt></ruby></span><b id="dewNum"></b></div>
+    </div>
+    <div class="detailOnly">
+      <div id="cupTitle"><ruby>空気<rt>くうき</rt></ruby>1m³がふくめる<ruby>水蒸気<rt>すいじょうき</rt></ruby>の<ruby>量<rt>りょう</rt></ruby></div>
+      <canvas id="cup" width="226" height="96" style="width:226px;height:96px"></canvas>
+      <div id="cupLegend"></div>
+    </div>
+  </div>
+</div>
+<div id="bar2" class="detailOnly">
+  <div class="sl"><span><ruby>山<rt>やま</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さ</span><input type="range" id="mtSl"><b id="mtNum"></b></div>
+  <div class="sl"><span><ruby>地上<rt>ちじょう</rt></ruby>の<ruby>湿度<rt>しつど</rt></ruby></span><input type="range" id="huSl"><b id="huNum"></b></div>
+</div>
+<div id="bar">
+  <button id="resetBtn">⏮ <ruby>最初<rt>さいしょ</rt></ruby></button>
+  <button id="playBtn">▶ <ruby>自動<rt>じどう</rt></ruby></button>
+  <button id="nextBtn"><ruby>次<rt>つぎ</rt></ruby>へ ⏭</button>
+  <div id="scrubWrap"><span><ruby>動<rt>うご</rt></ruby>かす</span><input type="range" id="scrub" min="0" max="1000" value="0"></div>
+  <button id="muteBtn" aria-label="音">🔊</button>
+</div>
+
+<div id="help">
+  <div id="helpCard">
+    <h1>☁ <ruby>雲<rt>くも</rt></ruby>のでき<ruby>方<rt>かた</rt></ruby></h1>
+    <p><ruby>空気<rt>くうき</rt></ruby>のかたまりが<ruby>山<rt>やま</rt></ruby>をのぼって、<ruby>雲<rt>くも</rt></ruby>や<ruby>雨<rt>あめ</rt></ruby>になるようすを<ruby>見<rt>み</rt></ruby>ます。</p>
+    <div class="how">
+      <div class="ic" style="background:#ffd84d">つぎへ ⏭</div><div>1だんかいずつ<ruby>進<rt>すす</rt></ruby>めて<ruby>止<rt>と</rt></ruby>まります</div>
+      <div class="ic" style="background:#9be29b">▶ じどう</div><div><ruby>最後<rt>さいご</rt></ruby>まで<ruby>自動<rt>じどう</rt></ruby>で<ruby>進<rt>すす</rt></ruby>みます（もう<ruby>一度<rt>いちど</rt></ruby>おすと<ruby>止<rt>と</rt></ruby>まる）</div>
+      <div class="ic">●━━━</div><div>スライダーで<ruby>空気<rt>くうき</rt></ruby>を<ruby>好<rt>す</rt></ruby>きな<ruby>高<rt>たか</rt></ruby>さに<ruby>動<rt>うご</rt></ruby>かせます</div>
+      <div class="ic">👆 🎥</div><div><ruby>画面<rt>がめん</rt></ruby>を<ruby>指<rt>ゆび</rt></ruby>でなぞると<ruby>見<rt>み</rt></ruby>る<ruby>向<rt>む</rt></ruby>きが<ruby>変<rt>か</rt></ruby>わります。🎥でもどります</div>
+    </div>
+    <p style="font-weight:700"><ruby>表示<rt>ひょうじ</rt></ruby>をえらぶ</p>
+    <div class="lvRow">
+      <button id="lvEasy">やさしい<small><ruby>色<rt>いろ</rt></ruby>と<ruby>絵<rt>え</rt></ruby>で<ruby>見<rt>み</rt></ruby>る</small></button>
+      <button id="lvDetail">くわしい<small><ruby>数字<rt>すうじ</rt></ruby>・<ruby>用語<rt>ようご</rt></ruby>・<ruby>山<rt>やま</rt></ruby>の<ruby>高<rt>たか</rt></ruby>さと<ruby>湿度<rt>しつど</rt></ruby>を<ruby>変<rt>か</rt></ruby>える</small></button>
+    </div>
+    <button id="startBtn">はじめる</button>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+/* ===================== 設定（ここの数値だけ直せば調整できます） ===================== */
+const CFG = {
+  version: 'v2026-11-10',
+  defaultLevel: 'easy',        // 'easy'（やさしい） / 'detail'（くわしい）。URL末尾 ?level=detail または #detail でも指定可
+  groundTemp: 25,              // 地上の気温（℃）
+  dryLapse: 1.0,               // 雲ができるまで：100mで何℃下がるか
+  wetLapse: 0.5,               // 雲ができてから：100mで何℃下がるか
+  humidity: { def: 55, min: 30, max: 90, step: 5 },          // 地上の湿度（%）
+  mountain: { def: 2000, min: 500, max: 3000, step: 100 },   // 山の高さ（m）
+  topExtra: 300,               // 山頂からさらに上がる高さ（m）
+  rainDepth: 600,              // 雲ができた高さから何m上がると雨になるか
+  duration: 34,                // 自動で最初から最後まで進む秒数
+  stepSpeed: 1.7,              // 「次へ」で進むときの速さ（自動の何倍か）
+  parcelR0: 2.3,               // 空気のかたまりの最初の半径
+  parcelGrow: 0.5,             // 1000m上がるごとに半径が何割ふえるか（実際より大げさ）
+  arrowLen: 3.0,               // 気圧の矢印の長さ（地上）
+  arrowShrink: 0.22,           // 1000m上がるごとに矢印が何割短くなるか（実際より大げさ）
+  dots: 64,                    // 水蒸気の粒の数
+  rainDrops: 240,
+  sound: true,
+};
+/* 飽和水蒸気量（g/m³）— 教科書の表の値 */
+const SAT_TABLE = [[-20,1.1],[-15,1.6],[-10,2.4],[-5,3.4],[0,4.8],[5,6.8],[10,9.4],[15,12.8],[20,17.3],[25,23.1],[30,30.4],[35,39.6]];
+
+/* ===================== 物理（教科書モデル） ===================== */
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const smooth=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t);};
+function sat(T){T=clamp(T,-20,35);for(let i=0;i<SAT_TABLE.length-1;i++){const[a,va]=SAT_TABLE[i],[b,vb]=SAT_TABLE[i+1];if(T<=b)return va+(vb-va)*(T-a)/(b-a);}return 39.6;}
+function dewOf(v){for(let i=0;i<SAT_TABLE.length-1;i++){const[a,va]=SAT_TABLE[i],[b,vb]=SAT_TABLE[i+1];if(v<=vb)return a+(b-a)*(v-va)/(vb-va);}return 35;}
+function seeded(s){return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+
+/* ===================== 状態 ===================== */
+const S = {
+  level: CFG.defaultLevel, p: 0, mode: 'idle', targetP: 0,
+  humidity: CFG.humidity.def, mountain: CFG.mountain.def,
+  vapor: 0, dew: 0, base: 0,
+  x: 0, h: 0, T: 0, rh: 0, cond: 0, cloudAmt: 0, rainAmt: 0, stage: 0,
+  paused: true, started: false, mute: false, frames: 0, elapsed: 0,
+};
+
+/* ===================== 地形と経路 ===================== */
+const XS=-41, XF=-22, XP=8, WL=30, WR=24, ZP=2;     // 出発x, ふもとx, 山頂x, 山の左右の幅, 空気のかたまりのz
+const PA=0.12, PB=0.9;                              // 経路の区切り（海の上→のぼり→山頂の上）
+function prof(x){const d=x<XP?(XP-x)/WL:(x-XP)/WR;return d>=1?0:0.5*(1+Math.cos(Math.PI*d));}
+function terrainH(x,z){ // ワールド単位（1 = 100m）
+  const back=z<-4?Math.min(1,(-4-z)/10):0;
+  const v=1-back*(0.13+0.1*Math.sin(z*0.31+1.2)+0.06*Math.sin(x*0.2+z*0.17));
+  let h=S.mountain/100*prof(x)*v;
+  h+=back*smooth(-31,-24,x)*(1-prof(x))*(1.3+1.2*Math.sin(x*0.13+2)*Math.cos(z*0.21));
+  return Math.max(0,h);
+}
+function pathAt(p){ // 進みぐあい p(0〜1) → x と 高さh(m)
+  const M=S.mountain;
+  if(p<PA) return {x:lerp(XS,XF,p/PA),h:0};
+  if(p<PB){const x=lerp(XF,XP,(p-PA)/(PB-PA));return {x,h:M*prof(x)};}
+  const u=(p-PB)/(1-PB);return {x:XP+u*1.5,h:M+CFG.topExtra*u};
+}
+function pForH(h){let a=0,b=1;for(let i=0;i<30;i++){const m=(a+b)/2;if(pathAt(m).h>=h)b=m;else a=m;}return b;}
+const topH=()=>S.mountain+CFG.topExtra;
+
+function recalcAir(){
+  S.vapor=sat(CFG.groundTemp)*S.humidity/100;
+  S.dew=dewOf(S.vapor);
+  S.base=(CFG.groundTemp-S.dew)*100/CFG.dryLapse;
+}
+function derive(){
+  const pt=pathAt(S.p); S.x=pt.x; S.h=pt.h;
+  S.T = S.h<=S.base ? CFG.groundTemp-S.h/100*CFG.dryLapse : S.dew-(S.h-S.base)/100*CFG.wetLapse;
+  const sv=sat(S.T);
+  S.rh=Math.min(100,S.vapor/sv*100);
+  S.cond=Math.max(0,S.vapor-sv);
+  S.cloudAmt=S.h>=S.base?smooth(0,400,S.h-S.base+40):0;
+  S.rainAmt=clamp((S.h-S.base-CFG.rainDepth)/300,0,1);
+  let st;
+  if(S.h>=S.base+CFG.rainDepth) st=3; else if(S.h>=S.base) st=2; else if(S.p>=0.999) st=4; else if(S.h>1) st=1; else st=0;
+  S.stage=st;
+}
+function stepTargets(){
+  const top=topH(), hs=[0.55*Math.min(S.base,top), S.base+150, S.base+CFG.rainDepth+250];
+  const t=hs.filter(h=>h<=top).map(pForH);
+  if(!t.length||t[t.length-1]<0.995) t.push(1);
+  return t;
+}
+
+/* ===================== Three.js 準備 ===================== */
+const stageEl=document.getElementById('stage');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+stageEl.prepend(renderer.domElement);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(35,1,1,600);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enablePan=false; controls.enableDamping=true; controls.dampingFactor=0.12;
+controls.minPolarAngle=THREE.MathUtils.degToRad(58); controls.maxPolarAngle=THREE.MathUtils.degToRad(88);
+controls.minAzimuthAngle=-0.6; controls.maxAzimuthAngle=0.6;
+const VIEW={cx:-4,w:90,minH:72,bottom:-9};   // 見える横幅・最低の縦幅・画面下端の高さ（ワールド単位）
+function fitView(){
+  const w=stageEl.clientWidth||800,h=stageEl.clientHeight||600;
+  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+  const t=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
+  const Hv=Math.max(VIEW.minH,VIEW.w/camera.aspect),d=Hv/2/t,cy=VIEW.bottom+Hv/2;
+  const a=THREE.MathUtils.degToRad(8);
+  camera.position.set(VIEW.cx,cy+d*Math.sin(a),d*Math.cos(a));
+  controls.target.set(VIEW.cx,cy,0);
+  controls.minDistance=d*0.45; controls.maxDistance=d*1.1; controls.update();
+}
+
+// 空
+{const c=document.createElement('canvas');c.width=8;c.height=256;const g=c.getContext('2d');const gr=g.createLinearGradient(0,0,0,256);
+ gr.addColorStop(0,'#3f97e6');gr.addColorStop(.6,'#a9d8ff');gr.addColorStop(1,'#e4f4ff');g.fillStyle=gr;g.fillRect(0,0,8,256);
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;scene.background=t;}
+scene.add(new THREE.HemisphereLight(0xffffff,0x8fae8f,1.25));
+const sunL=new THREE.DirectionalLight(0xffffff,1.7);sunL.position.set(-30,50,40);scene.add(sunL);
+{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const gr=g.createRadialGradient(64,64,6,64,64,64);
+ gr.addColorStop(0,'rgba(255,255,230,1)');gr.addColorStop(.35,'rgba(255,236,150,.95)');gr.addColorStop(1,'rgba(255,236,150,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));sp.scale.set(16,16,1);sp.position.set(-36,38,-34);scene.add(sp);}
+
+// 地形
+const TX0=-46,TX1=38,TZ0=-36,TZ1=8,NX=84,NZ=44;
+const terrGeo=new THREE.BufferGeometry();
+{const pos=new Float32Array((NX+1)*(NZ+1)*3),col=new Float32Array((NX+1)*(NZ+1)*3),idx=[];
+ for(let j=0;j<NZ;j++)for(let i=0;i<NX;i++){const a=j*(NX+1)+i,b=a+1,c=a+NX+1,d=c+1;idx.push(a,c,b,b,c,d);}
+ terrGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));terrGeo.setAttribute('color',new THREE.BufferAttribute(col,3));terrGeo.setIndex(idx);}
+const terrain=new THREE.Mesh(terrGeo,new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}));scene.add(terrain);
+const frontGeo=new THREE.BufferGeometry();
+{const pos=new Float32Array((NX+1)*2*3),idx=[];for(let i=0;i<NX;i++){const a=i*2;idx.push(a,a+1,a+2,a+2,a+1,a+3);}
+ frontGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));frontGeo.setIndex(idx);}
+const front=new THREE.Mesh(frontGeo,new THREE.MeshBasicMaterial({color:0xb48a58,side:THREE.DoubleSide}));scene.add(front);
+{const base=new THREE.Mesh(new THREE.BoxGeometry(84,4,44),new THREE.MeshLambertMaterial({color:0xa27b4e}));base.position.set(-4,-2.03,-14);scene.add(base);
+ const sea=new THREE.Mesh(new THREE.BoxGeometry(14.1,4.2,44.1),new THREE.MeshLambertMaterial({color:0x3f8fd8}));sea.position.set(-39,-1.96,-14);scene.add(sea);}
+const cGrass=new THREE.Color(0x86cc6c),cSand=new THREE.Color(0xe9dba2),cForest=new THREE.Color(0x4f9a55),cRock=new THREE.Color(0x9c907c),cSnow=new THREE.Color(0xffffff),cTmp=new THREE.Color();
+const TREES=150, trees=new THREE.InstancedMesh(new THREE.ConeGeometry(0.55,1.5,6),new THREE.MeshLambertMaterial({color:0x2f7d46,flatShading:true}),TREES);scene.add(trees);
+const treeXZ=[];{const r=seeded(7);for(let i=0;i<TREES;i++){let x,z;do{x=-29+r()*65;z=-34+r()*40;}while(z>-1.5&&z<5.5);treeXZ.push([x,z,0.7+r()*0.7]);}}
+const M4=new THREE.Matrix4(),Q0=new THREE.Quaternion(),V3=new THREE.Vector3(),SC=new THREE.Vector3();
+function rebuildTerrain(){
+  const pos=terrGeo.attributes.position,col=terrGeo.attributes.color;
+  for(let j=0;j<=NZ;j++)for(let i=0;i<=NX;i++){
+    const k=j*(NX+1)+i,x=lerp(TX0,TX1,i/NX),z=lerp(TZ0,TZ1,j/NZ),h=terrainH(x,z);
+    pos.setXYZ(k,x,h,z);
+    if(x<-30.5)cTmp.copy(cSand);else if(h<12)cTmp.copy(cGrass).lerp(cForest,h/12);else if(h<23)cTmp.copy(cForest).lerp(cRock,smooth(12,18,h));else cTmp.copy(cRock).lerp(cSnow,smooth(23,25.5,h));
+    col.setXYZ(k,cTmp.r,cTmp.g,cTmp.b);
+  }
+  pos.needsUpdate=true;col.needsUpdate=true;terrGeo.computeVertexNormals();
+  const fp=frontGeo.attributes.position;
+  for(let i=0;i<=NX;i++){const x=lerp(TX0,TX1,i/NX);fp.setXYZ(i*2,x,terrainH(x,TZ1),TZ1);fp.setXYZ(i*2+1,x,-0.03,TZ1);}
+  fp.needsUpdate=true;frontGeo.computeBoundingSphere();terrGeo.computeBoundingSphere();
+  treeXZ.forEach(([x,z,s],i)=>{const h=terrainH(x,z);const sc=h<15?s:0.0001;M4.compose(V3.set(x,h+0.75*sc,z),Q0,SC.set(sc,sc,sc));trees.setMatrixAt(i,M4);});
+  trees.instanceMatrix.needsUpdate=true;
+  layoutTrail();
+}
+
+// 文字ラベル（ふりがな付き）
+function makeLabel(segs,o={}){
+  const fs=56,rf=26,pad=18,font=`700 ${fs}px "BIZ UDPGothic","Hiragino Sans",sans-serif`,rfont=`400 ${rf}px "BIZ UDPGothic","Hiragino Sans",sans-serif`;
+  const c=document.createElement('canvas'),g=c.getContext('2d');g.font=font;
+  const ws=segs.map(s=>g.measureText(s[0]).width),W=ws.reduce((a,b)=>a+b,0)+pad*2,hasR=segs.some(s=>s[1]),H=fs+(hasR?rf+6:0)+pad*1.4;
+  c.width=Math.ceil(W);c.height=Math.ceil(H);
+  g.fillStyle=o.bg||'rgba(255,255,255,.92)';g.strokeStyle='#1c2b3a';g.lineWidth=5;
+  g.beginPath();g.roundRect(3,3,c.width-6,c.height-6,18);g.fill();g.stroke();
+  let x=pad;g.textBaseline='alphabetic';g.fillStyle=o.color||'#1c2b3a';
+  segs.forEach((s,i)=>{g.font=font;g.textAlign='left';g.fillText(s[0],x,c.height-pad*0.9);if(s[1]){g.font=rfont;g.textAlign='center';g.fillText(s[1],x+ws[i]/2,pad*0.5+rf);}x+=ws[i];});
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false}));
+  const hh=o.h||2.4;sp.scale.set(hh*c.width/c.height,hh,1);sp.renderOrder=20;return sp;
+}
+const labels=new THREE.Group();scene.add(labels);
+const ruler=new THREE.Group();scene.add(ruler);
+const baseLine=new THREE.Group();scene.add(baseLine);
+let parcelLabel=null, baseLabel=null;
+function buildLabels(){
+  const sea=makeLabel([['海','うみ']],{h:3.4});sea.position.set(-36,2.3,7.5);labels.add(sea);
+  const wind=makeLabel([['風','かぜ'],[' ➡','']],{h:3.3,color:'#0b63b8'});wind.position.set(-28.5,7.5,6);labels.add(wind);
+  parcelLabel=makeLabel([['空気','くうき'],['のかたまり','']],{h:3.4});scene.add(parcelLabel);
+  // 高さの目盛り（くわしい）
+  const pole=new THREE.Mesh(new THREE.BoxGeometry(0.25,34,0.25),new THREE.MeshBasicMaterial({color:0x1c2b3a}));pole.position.set(-45.3,17,ZP);ruler.add(pole);
+  for(let m=0;m<=3000;m+=500){const tk=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.2,0.2),new THREE.MeshBasicMaterial({color:0x1c2b3a}));tk.position.set(-44.7,m/100,ZP);ruler.add(tk);
+    if(m>0){const l=makeLabel([[m+'m','']],{h:2.3});l.position.set(-40.6,m/100,ZP);ruler.add(l);}}
+  const lg=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-44,0,ZP+0.2),new THREE.Vector3(34,0,ZP+0.2)]);
+  const ln=new THREE.Line(lg,new THREE.LineDashedMaterial({color:0x1c2b3a,dashSize:1.2,gapSize:0.8}));ln.computeLineDistances();baseLine.add(ln);
+  baseLabel=makeLabel([['雲','くも'],['ができる','',],['高','たか'],['さ','']],{h:3,bg:'rgba(227,241,255,.95)'});baseLabel.position.set(26,2,ZP+0.4);baseLine.add(baseLabel);
+}
+
+// 空気のかたまり
+const parcel=new THREE.Group();scene.add(parcel);
+const pMat=new THREE.MeshStandardMaterial({color:0xff8a3c,transparent:true,opacity:0.42,depthWrite:false,roughness:0.4});
+const pRim=new THREE.MeshBasicMaterial({color:0xff8a3c,transparent:true,opacity:0.6,depthWrite:false,side:THREE.BackSide});
+const pSphere=new THREE.Mesh(new THREE.SphereGeometry(1,32,20),pMat),pRimMesh=new THREE.Mesh(new THREE.SphereGeometry(1.05,32,20),pRim);
+pSphere.renderOrder=5;pRimMesh.renderOrder=4;parcel.add(pRimMesh,pSphere);
+const dots=new THREE.InstancedMesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0xffffff}),CFG.dots);
+dots.instanceMatrix.setUsage(THREE.DynamicDrawUsage);parcel.add(dots);
+const dotBase=[];{const r=seeded(11);while(dotBase.length<CFG.dots){const x=r()*2-1,y=r()*2-1,z=r()*2-1;if(x*x+y*y+z*z<0.72)dotBase.push([x,y,z,r()*6.28,0.6+r()*0.8]);}}
+const cBlue=new THREE.Color(0x2f6bff),cWhite=new THREE.Color(0xffffff);
+for(let i=0;i<CFG.dots;i++)dots.setColorAt(i,cBlue);
+const cloudMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:1,emissive:0x8a8f96,emissiveIntensity:0.55});
+const puffGeo=new THREE.IcosahedronGeometry(1,2);
+const pPuffs=[];{const r=seeded(23);for(let i=0;i<10;i++){const a=i/10*6.283,m=new THREE.Mesh(puffGeo,cloudMat);
+  m.userData={x:Math.cos(a)*(0.75+r()*0.2),y:Math.sin(a)*0.55+0.25,z:-0.55-r()*0.5,s:0.5+r()*0.25};parcel.add(m);pPuffs.push(m);}}
+// 気圧の矢印
+const arrows=[];{const am=new THREE.MeshBasicMaterial({color:0xd9480f});
+  for(let i=0;i<6;i++){const g=new THREE.Group();g.rotation.z=i/6*6.283+0.52-Math.PI/2;
+    const cone=new THREE.Mesh(new THREE.ConeGeometry(0.5,1,12),am);cone.rotation.x=Math.PI;const sh=new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.17,1,8),am);
+    g.add(cone,sh);g.userData={cone,sh};parcel.add(g);arrows.push(g);}}
+
+// 通ったあとに残る雲
+const TRAIL=38,trail=[];{const r=seeded(31);for(let i=0;i<TRAIL;i++){const m=new THREE.Mesh(puffGeo,cloudMat);m.userData={rz:r(),ry:r(),s:1.7+r()*1.5,p:lerp(PA,1,(i+0.5)/TRAIL),alt:0,cur:0};m.scale.setScalar(0.0001);scene.add(m);trail.push(m);}}
+function layoutTrail(){trail.forEach(m=>{const u=m.userData,pt=pathAt(u.p),z=ZP-2.5-u.rz*8;u.alt=pt.h;m.position.set(pt.x,Math.max(pt.h/100,terrainH(pt.x,z))+1.6+u.ry*1.8,z);});}
+
+// 雨
+const rain=new THREE.InstancedMesh(new THREE.BoxGeometry(0.13,1,0.13),new THREE.MeshBasicMaterial({color:0x2f6fe0}),CFG.rainDrops);
+rain.instanceMatrix.setUsage(THREE.DynamicDrawUsage);rain.frustumCulled=false;scene.add(rain);
+const drops=[];{const r=seeded(41);for(let i=0;i<CFG.rainDrops;i++)drops.push({u:r(),z:-8+r()*13,ph:r(),sp:0.9+r()*0.6});}
+// 風のすじ
+const WIND=26,windGeo=new THREE.BufferGeometry();windGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(WIND*6),3));
+const windLines=new THREE.LineSegments(windGeo,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.7}));windLines.frustumCulled=false;scene.add(windLines);
+const winds=[];{const r=seeded(53);for(let i=0;i<WIND;i++)winds.push({z:-10+r()*16,ph:r(),sp:0.06+r()*0.05,off:0.7+r()*1.6});}
+
+/* ===================== 音（Web Audio） ===================== */
+let AC=null,rainGain=null,master=null;
+function initAudio(){
+  if(AC||!CFG.sound){if(AC&&AC.state==='suspended')AC.resume();return;}
+  try{
+    AC=new (window.AudioContext||window.webkitAudioContext)();AC.resume();
+    master=AC.createGain();master.gain.value=S.mute?0:1;master.connect(AC.destination);
+    const buf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    const src=AC.createBufferSource();src.buffer=buf;src.loop=true;const f=AC.createBiquadFilter();f.type='highpass';f.frequency.value=2500;
+    rainGain=AC.createGain();rainGain.gain.value=0;src.connect(f);f.connect(rainGain);rainGain.connect(master);src.start();
+  }catch(e){AC=null;}
+}
+function tone(freq,dur,vol=0.15,type='sine',delay=0){
+  if(!AC)return;const t=AC.currentTime+delay,o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=freq;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+0.02);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+0.05);
+}
+const sClick=()=>tone(660,0.08,0.1,'triangle');
+const sCloud=()=>{tone(784,0.5,0.14);tone(1047,0.6,0.14,'sine',0.12);tone(1319,0.8,0.12,'sine',0.24);};
+
+/* ===================== 画面まわり ===================== */
+const $=id=>document.getElementById(id);
+const R=(k,r)=>`<ruby>${k}<rt>${r}</rt></ruby>`;
+function captionHTML(){
+  const d=S.level==='detail';
+  switch(S.stage){
+    case 0:return d?`${R('地表','ちひょう')}${R('近','ちか')}くの${R('空気','くうき')}。${R('水蒸気','すいじょうき')}をふくんでいる（${R('気温','きおん')}${CFG.groundTemp}℃・${R('湿度','しつど')}${S.humidity}％）。`
+      :`${R('海','うみ')}の${R('上','うえ')}の${R('空気','くうき')}には、${R('目','め')}に${R('見','み')}えない${R('水蒸気','すいじょうき')}がたくさんふくまれています。`;
+    case 1:return d?`${R('上昇','じょうしょう')}すると、まわりの${R('気圧','きあつ')}が${R('低','ひく')}くなるので${R('空気','くうき')}が${R('膨張','ぼうちょう')}し、${R('温度','おんど')}が${R('下','さ')}がる（100mで${R('約','やく')}1℃）。`
+      :`${R('風','かぜ')}で${R('山','やま')}にそって${R('上','あ')}がると、${R('空気','くうき')}はふくらんで、${R('温度','おんど')}が${R('下','さ')}がります。`;
+    case 2:return d?`${R('露点','ろてん')}に${R('達','たっ')}した！ ${R('水蒸気','すいじょうき')}が${R('水滴','すいてき')}（${R('雲粒','くもつぶ')}）に${R('変','か')}わり、${R('雲','くも')}ができる。`
+      :`${R('冷','ひ')}えると、${R('水蒸気','すいじょうき')}が${R('小','ちい')}さな${R('水','みず')}のつぶになります。これが${R('雲','くも')}です。`;
+    case 3:return d?`さらに${R('上昇','じょうしょう')}すると${R('雲粒','くもつぶ')}が${R('大','おお')}きくなり、${R('雨','あめ')}や${R('雪','ゆき')}になって${R('落','お')}ちてくる。`
+      :`${R('雲','くも')}のつぶが${R('大','おお')}きくなると、${R('雨','あめ')}になって${R('落','お')}ちてきます。`;
+    default:return `${R('露点','ろてん')}まで${R('温度','おんど')}が${R('下','さ')}がらなかったので、${R('雲','くも')}はできなかった。${R('山','やま')}を${R('高','たか')}くするか、${R('湿度','しつど')}を${R('上','あ')}げてみよう。`;
+  }
+}
+function statusHTML(){
+  if(S.stage===2)return `☁ ${R('雲','くも')}ができた！`;
+  if(S.stage===3)return `🌧 ${R('雨','あめ')}がふっている`;
+  return `☀ ${R('雲','くも')}はまだない`;
+}
+function tempCSS(T,a=1){const t=clamp(T/25,0,1);return `rgba(${Math.round(lerp(74,255,t))},${Math.round(lerp(163,130,t))},${Math.round(lerp(255,50,t))},${a})`;}
+const thermoC=$('thermo'),cupC=$('cup');
+function hidpi(c){const r=Math.min(window.devicePixelRatio||1,2),w=c.width,h=c.height;c.width=w*r;c.height=h*r;const g=c.getContext('2d');g.scale(r,r);c._w=w;c._h=h;return g;}
+const gT=hidpi(thermoC),gC=hidpi(cupC);
+function drawThermo(){
+  const g=gT,w=thermoC._w,h=thermoC._h,x=w/2-(S.level==='detail'?12:0),y0=14,y1=h-44,tw=22;g.clearRect(0,0,w,h);
+  const f=clamp((S.T+10)/40,0,1),yy=lerp(y1,y0,f);
+  g.lineWidth=4;g.strokeStyle='#1c2b3a';g.fillStyle='#fff';
+  g.beginPath();g.roundRect(x-tw/2,y0-8,tw,y1-y0+20,tw/2);g.fill();g.stroke();
+  g.fillStyle=tempCSS(S.T);g.fillRect(x-tw/2+4,yy,tw-8,y1-yy+12);
+  g.beginPath();g.arc(x,h-26,20,0,6.3);g.fill();g.stroke();
+  if(S.level==='detail'){g.fillStyle='#1c2b3a';g.font='700 13px "BIZ UDPGothic",sans-serif';g.textAlign='left';g.textBaseline='middle';
+    for(let t=-10;t<=30;t+=10){const ty=lerp(y1,y0,(t+10)/40);g.fillRect(x+tw/2,ty-1,7,2);g.fillText(t,x+tw/2+10,ty);}}
+}
+function drawCup(){
+  const g=gC,w=cupC._w,h=cupC._h,k=3.6,by=h-6,cx=18,cw=92;g.clearRect(0,0,w,h);
+  const sv=sat(S.T),vin=Math.min(S.vapor,sv);
+  g.fillStyle='#2f6bff';g.fillRect(cx,by-vin*k,cw,vin*k);
+  g.lineWidth=4;g.strokeStyle='#1c2b3a';g.beginPath();g.moveTo(cx,by-sv*k);g.lineTo(cx,by);g.lineTo(cx+cw,by);g.lineTo(cx+cw,by-sv*k);g.stroke();
+  g.setLineDash([5,4]);g.lineWidth=2;g.beginPath();g.moveTo(cx-8,by-sv*k);g.lineTo(cx+cw+8,by-sv*k);g.stroke();g.setLineDash([]);
+  const dx=136,dw=70;
+  if(S.cond>0.05){g.fillStyle='#bfe3ff';g.fillRect(dx,by-S.cond*k,dw,S.cond*k);g.lineWidth=3;g.strokeRect(dx,by-S.cond*k,dw,S.cond*k);
+    g.fillStyle='#1c2b3a';g.font='700 22px sans-serif';g.textAlign='center';g.fillText('➡',cx+cw+13,by-vin*k+8);}
+}
+const cache={};
+function setHTML(id,html){if(cache[id]!==html){cache[id]=html;$(id).innerHTML=html;}}
+function syncUI(force){
+  const d=S.level==='detail';
+  setHTML('caption',captionHTML());setHTML('status',statusHTML());
+  const st=$('status');const cls=S.stage===2?'s2':S.stage===3?'s3':'';if(st.className!==cls)st.className=cls;
+  const key=S.T.toFixed(1)+S.level+S.cond.toFixed(1)+S.humidity;
+  if(force||cache.key!==key){cache.key=key;drawThermo();if(d)drawCup();}
+  if(d){
+    setHTML('tempNum',S.T.toFixed(1)+'<small style="font-size:20px">℃</small>');
+    setHTML('hNum',Math.round(S.h/10)*10+' m');setHTML('rhNum',Math.round(S.rh)+' ％');setHTML('dewNum',S.dew.toFixed(1)+' ℃');
+    setHTML('cupLegend',`<div>┄ ${R('飽和水蒸気量','ほうわすいじょうきりょう')} <b>${sat(S.T).toFixed(1)}g</b></div><div><i style="background:#2f6bff"></i>${R('水蒸気','すいじょうき')} <b>${Math.min(S.vapor,sat(S.T)).toFixed(1)}g</b>　<i style="background:#bfe3ff"></i>${R('水滴','すいてき')} <b>${S.cond.toFixed(1)}g</b></div>`);
+    setHTML('mtNum',S.mountain+' m');setHTML('huNum',S.humidity+' ％');
+  }
+  setHTML('playBtn',S.mode==='play'?`⏸ ${R('止','と')}める`:`▶ ${R('自動','じどう')}`);
+  const sc=$('scrub');if(!sc._drag){const v=String(Math.round(S.p*1000));if(sc.value!==v)sc.value=v;}
+}
+
+/* ===================== 毎フレームの更新 ===================== */
+let prevStage=0;
+const colWarm=new THREE.Color(0xff8232),colCold=new THREE.Color(0x4aa3ff),colCloudW=new THREE.Color(0xffffff),colCloudG=new THREE.Color(0xaab2bd);
+function update(dt){
+  if(S.paused)return;
+  S.elapsed+=dt;S.frames++;
+  if(S.mode==='play'){S.p+=dt/CFG.duration;if(S.p>=1){S.p=1;S.mode='idle';}}
+  else if(S.mode==='step'){S.p+=dt/CFG.duration*CFG.stepSpeed;if(S.p>=S.targetP){S.p=S.targetP;S.mode='idle';}}
+  derive();
+  if(S.stage!==prevStage){if(S.stage===2&&prevStage<2)sCloud();if(S.stage===3&&prevStage===2)tone(392,0.4,0.1);prevStage=S.stage;}
+  updateVisuals(dt);
+}
+function updateVisuals(dt){
+  const t=S.elapsed,r=CFG.parcelR0*(1+CFG.parcelGrow*S.h/1000),py=S.h/100+r+0.5;
+  parcel.position.set(S.x,py,ZP);
+  pSphere.scale.setScalar(r);pRimMesh.scale.setScalar(r);
+  pMat.color.copy(colCold).lerp(colWarm,clamp(S.T/25,0,1));pRim.color.copy(pMat.color);
+  pMat.opacity=0.42+0.2*S.cloudAmt;
+  // 粒：水蒸気（青）→ 水のつぶ（白）
+  const nW=Math.round(CFG.dots*Math.min(0.85,S.cond/S.vapor*1.9+(S.cloudAmt>0?0.08*S.cloudAmt:0)));
+  for(let i=0;i<CFG.dots;i++){const b=dotBase[i],w=i<nW,s=w?0.27*(1+0.7*S.rainAmt):0.17;
+    V3.set(b[0]*r+Math.sin(t*b[4]+b[3])*0.18,b[1]*r+Math.cos(t*b[4]*1.3+b[3])*0.18,b[2]*r);
+    M4.compose(V3,Q0,SC.set(s,s,s));dots.setMatrixAt(i,M4);dots.setColorAt(i,w?cWhite:cBlue);}
+  dots.instanceMatrix.needsUpdate=true;dots.instanceColor.needsUpdate=true;
+  cloudMat.color.copy(colCloudW).lerp(colCloudG,S.rainAmt);
+  pPuffs.forEach(m=>{const u=m.userData,s=Math.max(0.0001,S.cloudAmt*r*u.s);m.scale.setScalar(s);m.position.set(u.x*r,u.y*r,u.z*r);});
+  const L=Math.max(0.6,CFG.arrowLen*(1-CFG.arrowShrink*S.h/1000));
+  arrows.forEach(g=>{g.userData.cone.position.y=r+0.75;g.userData.sh.scale.y=L;g.userData.sh.position.y=r+1.25+L/2;});
+  if(parcelLabel){parcelLabel.position.set(S.x,py+r+L+3.8,ZP);parcelLabel.visible=S.cloudAmt<0.5;}
+  // 残る雲
+  const k=Math.min(1,dt*6);
+  trail.forEach(m=>{const u=m.userData,tg=(u.alt>=S.base&&u.alt<=S.h-60)?u.s*(1+0.25*S.rainAmt):0;u.cur+=(tg-u.cur)*k;m.scale.setScalar(Math.max(0.0001,u.cur));});
+  // 雨
+  const nR=Math.round(CFG.rainDrops*S.rainAmt);
+  if(nR>0||rain.count>0){
+    const xr0=pathAt(pForH(S.base+CFG.rainDepth*0.45)).x,xr1=S.x+1.5;
+    for(let i=0;i<nR;i++){const d=drops[i],x=lerp(xr0,xr1,d.u),top=Math.min(S.mountain*prof(Math.min(x,XP)),S.h)/100+2.2,bot=terrainH(x,d.z),f=(t*d.sp+d.ph)%1;
+      M4.compose(V3.set(x,lerp(top,bot,f),d.z),Q0,SC.set(1,1,1));rain.setMatrixAt(i,M4);}
+    rain.count=nR;rain.instanceMatrix.needsUpdate=true;
+  }
+  if(rainGain&&AC)rainGain.gain.setTargetAtTime(0.1*S.rainAmt,AC.currentTime,0.2);
+  // 風
+  const wp=windGeo.attributes.position;
+  winds.forEach((w,i)=>{const x=-46+((t*w.sp+w.ph)%1)*72,x2=x-2.6;wp.setXYZ(i*2,x,terrainH(x,w.z)+w.off,w.z);wp.setXYZ(i*2+1,x2,terrainH(x2,w.z)+w.off,w.z);});
+  wp.needsUpdate=true;
+  // 雲ができる高さの線（くわしい・雲ができてから）
+  baseLine.visible=S.level==='detail'&&S.h>=S.base;baseLine.position.y=S.base/100+0.6;
+  ruler.visible=S.level==='detail';
+}
+
+/* ===================== 操作 ===================== */
+function setP(p){S.p=clamp(p,0,1);S.mode='idle';derive();prevStage=S.stage;}
+function play(){if(S.p>=0.999)S.p=0;S.mode='play';}
+function pause(){S.mode='idle';}
+function next(){const t=stepTargets().find(v=>v>S.p+0.004);if(t===undefined)return;S.targetP=t;S.mode='step';}
+function reset(){setP(0);}
+function setHumidity(v){S.humidity=clamp(v,CFG.humidity.min,CFG.humidity.max);recalcAir();derive();prevStage=S.stage;}
+function setMountain(v){S.mountain=clamp(v,CFG.mountain.min,CFG.mountain.max);rebuildTerrain();derive();prevStage=S.stage;}
+function setLevel(lv){
+  S.level=lv==='detail'?'detail':'easy';
+  document.body.classList.toggle('detail',S.level==='detail');
+  $('lvEasy').classList.toggle('on',S.level==='easy');$('lvDetail').classList.toggle('on',S.level==='detail');
+  if(S.level==='easy'){S.humidity=CFG.humidity.def;if(S.mountain!==CFG.mountain.def){S.mountain=CFG.mountain.def;rebuildTerrain();}
+    $('mtSl').value=S.mountain;$('huSl').value=S.humidity;}
+  recalcAir();derive();prevStage=S.stage;cache.key=null;
+  requestAnimationFrame(()=>{fitView();syncUI(true);});
+}
+function showHelp(v){S.paused=v;$('help').classList.toggle('hide',!v);if(rainGain&&AC&&v)rainGain.gain.setTargetAtTime(0,AC.currentTime,0.05);}
+
+function bind(id,fn){$(id).addEventListener('click',e=>{initAudio();sClick();fn(e);});}
+bind('resetBtn',reset);
+bind('playBtn',()=>S.mode==='play'?pause():play());
+bind('nextBtn',next);
+bind('helpBtn',()=>showHelp(true));
+bind('viewBtn',()=>{controls.reset();fitView();});
+bind('muteBtn',()=>{S.mute=!S.mute;if(master)master.gain.value=S.mute?0:1;$('muteBtn').textContent=S.mute?'🔇':'🔊';});
+bind('lvEasy',()=>setLevel('easy'));
+bind('lvDetail',()=>setLevel('detail'));
+bind('startBtn',()=>{S.started=true;showHelp(false);});
+{const sc=$('scrub');
+ sc.addEventListener('input',()=>{sc._drag=true;setP(sc.value/1000);});
+ ['change','pointerup','touchend'].forEach(ev=>sc.addEventListener(ev,()=>{sc._drag=false;}));
+ const mt=$('mtSl'),hu=$('huSl');
+ Object.assign(mt,{min:CFG.mountain.min,max:CFG.mountain.max,step:CFG.mountain.step,value:CFG.mountain.def});
+ Object.assign(hu,{min:CFG.humidity.min,max:CFG.humidity.max,step:CFG.humidity.step,value:CFG.humidity.def});
+ mt.addEventListener('input',()=>setMountain(+mt.value));
+ hu.addEventListener('input',()=>setHumidity(+hu.value));}
+
+/* iPad対策：ダブルタップ拡大・ピンチ・スクロールを止める */
+{let lastTap=0;
+ document.addEventListener('touchend',e=>{const now=Date.now(),ui=e.target.closest&&e.target.closest('button,input');if(now-lastTap<300&&!ui)e.preventDefault();lastTap=now;},{passive:false});
+ document.addEventListener('touchmove',e=>{const ok=e.target.closest&&e.target.closest('input[type=range],#helpCard,#panel');if(!ok)e.preventDefault();},{passive:false});
+ ['gesturestart','gesturechange','gestureend'].forEach(n=>document.addEventListener(n,e=>e.preventDefault()));
+ document.addEventListener('dblclick',e=>e.preventDefault());
+ document.addEventListener('contextmenu',e=>e.preventDefault());}
+
+/* ===================== 起動 ===================== */
+function levelFromURL(){
+  let q='';try{q=new URLSearchParams(location.search).get('level')||'';}catch(e){}
+  const h=(location.hash||'').replace('#','');
+  const v=(q||h).toLowerCase();
+  if(v==='detail'||v==='kuwashii')return 'detail';
+  if(v==='easy'||v==='yasashii')return 'easy';
+  return CFG.defaultLevel;
+}
+$('ver').textContent=CFG.version;
+recalcAir();rebuildTerrain();derive();
+setLevel(levelFromURL());
+window.addEventListener('hashchange',()=>{const h=location.hash.replace('#','');if(h==='easy'||h==='detail')setLevel(h);});
+fitView();updateVisualsSafe();
+new ResizeObserver(()=>fitView()).observe(stageEl);
+window.addEventListener('resize',fitView);
+function updateVisualsSafe(){updateVisuals(0);syncUI(true);}
+// フォントを待ってから3D内の文字を作る（読めなくても2.5秒で先へ進む）
+Promise.race([document.fonts.load('700 56px "BIZ UDPGothic"','海風空気雲高'),new Promise(r=>setTimeout(r,2500))]).catch(()=>{}).then(()=>{buildLabels();updateVisualsSafe();});
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,1/30);last=now;   // 120Hzでも速さが変わらないよう、経過時間で動かす（1/30秒で上限）
+  update(dt);controls.update();syncUI();
+  renderer.render(scene,camera);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ===================== テスト用フック =====================
+   空気のかたまりは .position ではなく S.p（経路上の進みぐあい 0〜1）で動かしている。
+   位置・気温・雲の量などはすべて derive() が S.p から計算する。 */
+window.__game={
+  state:S,CFG,camera,scene,parcel,trail,
+  api:{
+    tick(n=1,dt=1/60){for(let i=0;i<n;i++)update(dt);syncUI(true);renderer.render(scene,camera);return this.info();},
+    start(){S.started=true;showHelp(false);},
+    setP(p){setP(p);updateVisuals(0);},
+    setLevel,setHumidity(v){$('huSl').value=v;setHumidity(v);},setMountain(v){$('mtSl').value=v;setMountain(v);},
+    play,pause,next,reset,showHelp,stepTargets,pForH,sat,
+    info(){return {p:S.p,mode:S.mode,level:S.level,x:S.x,h:S.h,T:S.T,rh:S.rh,cond:S.cond,cloudAmt:S.cloudAmt,rainAmt:S.rainAmt,stage:S.stage,base:S.base,dew:S.dew,vapor:S.vapor,frames:S.frames,elapsed:S.elapsed,paused:S.paused};}
+  }
+};
+</script>
+</body>
+</html>
