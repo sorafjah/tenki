@@ -65,7 +65,7 @@
 </style>
 </head>
 <body>
-<!-- build: 2026-11-10d -->
+<!-- build: 2026-11-10e -->
 <div id="stage">
   <div id="caption"></div>
   <button id="helpBtn" aria-label="せつめい">？</button>
@@ -108,7 +108,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* ===================== 設定（ここの数値だけ直せば調整できます） ===================== */
 const CFG = {
-  version: 'v2026-11-10d',
+  version: 'v2026-11-10e',
   groundTemp: 25,              // 地上の気温（℃）
   dryLapse: 1.0,               // 雲ができるまで：100mで何℃下がるか
   wetLapse: 0.5,               // 雲ができてから：100mで何℃下がるか
@@ -311,13 +311,13 @@ function parcelPos(r){   // 斜面にめりこまないよう、斜面の法線�
 const rain=new THREE.InstancedMesh(new THREE.BoxGeometry(0.13,1,0.13),new THREE.MeshBasicMaterial({color:0x2f6fe0}),CFG.rainDrops);
 rain.instanceMatrix.setUsage(THREE.DynamicDrawUsage);rain.frustumCulled=false;scene.add(rain);
 const drops=[];{const r=seeded(41);for(let i=0;i<CFG.rainDrops;i++)drops.push({u:r(),zz:r()*2-1,ph:r(),sp:0.9+r()*0.6});}
-// 風：海から山へふく向きを、大きな矢印で見せる
+// 風：海から山の斜面へふく向きを、大きな矢印で見せる
 const windArrows=[];
-[[12.2,0.15],[15.7,0.6]].forEach(([y,ph])=>{
+[[12.2,0.15,10],[15.7,0.6,13.5]].forEach(([y,ph,clear])=>{
   const mat=new THREE.MeshBasicMaterial({color:0x3b86e0,transparent:true,opacity:0.9,depthWrite:false}),g=new THREE.Group();
   const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,5,12),mat);shaft.rotation.z=-Math.PI/2;shaft.position.x=-1.0;
   const head=new THREE.Mesh(new THREE.ConeGeometry(0.95,2,16),mat);head.rotation.z=-Math.PI/2;head.position.x=2.5;
-  g.add(shaft,head);g.userData={y,ph,mat};scene.add(g);windArrows.push(g);
+  g.add(shaft,head);g.userData={y,ph,clear,mat};scene.add(g);windArrows.push(g);
 });
 
 /* ===================== 音（Web Audio） ===================== */
@@ -411,9 +411,11 @@ function updateVisuals(dt){
     rain.count=nR;rain.instanceMatrix.needsUpdate=true;
   }
   if(rainGain&&AC)rainGain.gain.setTargetAtTime(0.1*ra,AC.currentTime,0.2);
-  // 風の矢印（海から山のふもと・斜面の近くまで進んで、すうっと消える）
-  windArrows.forEach(g=>{const u=g.userData,ph=(t*0.075+u.ph)%1;
-    g.position.set(lerp(-41.5,-10,ph),u.y,5);u.mat.opacity=0.92*Math.min(1,Math.sin(Math.PI*ph)*2.2);});
+  // 風の矢印（海の上をまっすぐ進み、山にぶつかったら斜面にそって上へ向かい、すうっと消える）
+  windArrows.forEach(g=>{const u=g.userData,ph=(t*0.075+u.ph)%1,x=lerp(-41.5,-2,ph);
+    const yAt=xx=>{const d=terrainH(xx,5)+u.clear-u.y;return u.y+0.5*(d+Math.sqrt(d*d+4));};   // 斜面より高いところだけ、なめらかに持ち上げる
+    g.position.set(x,yAt(x),5);g.rotation.z=Math.atan2(yAt(x+0.4)-yAt(x-0.4),0.8);
+    u.mat.opacity=0.92*Math.min(1,Math.sin(Math.PI*ph)*2.2);});
 }
 
 /* ===================== 操作 ===================== */
