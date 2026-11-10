@@ -31,7 +31,7 @@
     border-radius:16px;padding:6px 16px 8px;font-weight:700;font-size:clamp(16px,2.25vw,27px);line-height:1.9;pointer-events:none;}
   #helpBtn{position:absolute;right:12px;top:10px;width:54px;height:54px;border-radius:50%;border:3px solid #1c2b3a;background:#ffd84d;
     font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;}
-  #viewBtn{position:absolute;right:12px;bottom:12px;min-height:52px;padding:0 18px;border-radius:26px;border:3px solid #1c2b3a;background:#fff;
+  #viewBtn{align-self:center;pointer-events:auto;min-height:52px;padding:0 18px;border-radius:26px;border:3px solid #1c2b3a;background:#fff;
     font-size:19px;font-weight:700;line-height:1.7;white-space:nowrap;}
   #ver{position:absolute;left:12px;bottom:6px;font-size:11px;color:#1c2b3a;opacity:.6;pointer-events:none;}
 
@@ -66,7 +66,7 @@
 </style>
 </head>
 <body>
-<!-- build: 2026-11-10b -->
+<!-- build: 2026-11-10c -->
 <div id="stage">
   <div id="caption"></div>
   <button id="helpBtn" aria-label="せつめい">？</button>
@@ -76,8 +76,8 @@
       <canvas id="thermo" width="80" height="190" style="width:80px;height:190px"></canvas>
       <div id="thermoSide"><span class="hot">あたたかい</span><span class="cold">つめたい</span></div>
     </div>
+    <button id="viewBtn"><ruby>視点<rt>してん</rt></ruby>もどす</button>
   </div>
-  <button id="viewBtn"><ruby>視点<rt>してん</rt></ruby>もどす</button>
   <div id="ver"></div>
 </div>
 <div id="bar">
@@ -105,10 +105,11 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* ===================== 設定（ここの数値だけ直せば調整できます） ===================== */
 const CFG = {
-  version: 'v2026-11-10b',
+  version: 'v2026-11-10c',
   groundTemp: 25,              // 地上の気温（℃）
   dryLapse: 1.0,               // 雲ができるまで：100mで何℃下がるか
   wetLapse: 0.5,               // 雲ができてから：100mで何℃下がるか
@@ -143,18 +144,15 @@ const S = {
   paused: true, started: false, mute: false, frames: 0, elapsed: 0,
 };
 
-/* ===================== 地形と経路（山の幅は以前の半分、山の向こう側は短く切ってある） ===================== */
-const XS=-26, XP=0, WL=15, WR=12, ZP=2;           // 出発x, 山頂x, 山の左右の幅, 空気のかたまりのz
+/* ===================== 地形と経路（奥行きは以前の半分。山の向こう側の奥は、くぼみで切ってある） ===================== */
+const XS=-37, XP=8, WL=30, WR=24, ZP=2;           // 出発x, 山頂x, 山の左右の幅（進む向き）, 空気のかたまりのz
 const XF=XP-WL;                                   // ふもと
 const PA=0.12, PB=0.9;                            // 経路の区切り（海の上→のぼり→山頂の上）
-const TX0=-31, TX1=15, TZ0=-22, TZ1=8;            // 地形の範囲
+const TX0=-46, TX1=38, TZ0=-14, TZ1=8;            // 地形の範囲（奥行きは 22 ＝ 以前の半分）
 function prof(x){const d=x<XP?(XP-x)/WL:(x-XP)/WR;return d>=1?0:0.5*(1+Math.cos(Math.PI*d));}
-function terrainH(x,z){ // ワールド単位（1 = 100m）
-  const back=z<-4?Math.min(1,(-4-z)/8):0;
-  const v=1-back*(0.13+0.1*Math.sin(z*0.31+1.2)+0.06*Math.sin(x*0.2+z*0.17));
-  let h=S.mountain/100*prof(x)*v;
-  h+=back*smooth(-22,-17,x)*(1-prof(x))*(1.0+0.9*Math.sin(x*0.25+2)*Math.cos(z*0.21));
-  return Math.max(0,h);
+function terrainH(x,z){ // ワールド単位（1 = 100m）。奥の端（TZ0）に向かってなだらかに低くなる
+  const back=smooth(TZ0,TZ0+5,z);
+  return Math.max(0,S.mountain/100*prof(x)*back);
 }
 function pathAt(p){ // 進みぐあい p(0〜1) → x と 高さh(m)
   const M=S.mountain;
@@ -191,7 +189,7 @@ function stepTargets(){
 
 /* ===================== Three.js 準備 ===================== */
 const $=id=>document.getElementById(id);
-const stageEl=$('stage'), capEl=$('caption'), panelEl=$('panel');
+const stageEl=$('stage'), capEl=$('caption');
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
 renderer.domElement.id='gl';
@@ -202,18 +200,19 @@ const controls=new OrbitControls(camera,renderer.domElement);
 controls.enablePan=false; controls.enableDamping=true; controls.dampingFactor=0.12;
 controls.minPolarAngle=THREE.MathUtils.degToRad(58); controls.maxPolarAngle=THREE.MathUtils.degToRad(88);
 controls.minAzimuthAngle=-0.6; controls.maxAzimuthAngle=0.6;
-/* 画面いっぱいに空を描き、右のパネルは空の上に重ねる。3Dの景色は、説明文（上）とパネル（右）をよけた範囲にできるだけ大きく置く */
-const VIEW={cx:-8,w:50,top:37,bottom:-4.5,botPad:12};   // 景色の中心x・横幅・上端・下端（ワールド単位）と、下の余白(px)
+/* 画面いっぱいに空を描き、右のパネルは空の上に重ねる（右の山のふもとは低いのでパネルと重ならない）。景色は説明文（上）をよけて、できるだけ大きく置く */
+const VIEW={cx:-4,w:88,top:37,bottom:-4.5,botPad:50};   // 景色の中心x・横幅・上端・下端（ワールド単位）と、下の余白(px)
 function fitView(){
   const w=stageEl.clientWidth||800,h=stageEl.clientHeight||600;
   renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
   const fs=parseFloat(getComputedStyle(capEl).fontSize)||24;
   const capH=3.8*fs+20+10+8;                       // 説明文の高さ（2行ぶん固定）＋すきま
-  const panelW=panelEl.offsetWidth+24;
-  const ppu=Math.min((w-panelW-16)/VIEW.w,(h-capH-VIEW.botPad)/(VIEW.top-VIEW.bottom));   // 1ワールド単位が何pxか
+  const avail=h-capH-VIEW.botPad, units=VIEW.top-VIEW.bottom;
+  const ppu=Math.min((w-16)/VIEW.w,avail/units);   // 1ワールド単位が何pxか
+  const extra=Math.max(0,avail-units*ppu);          // 縦にあまった分は上下半分ずつ（景色を少し上へ）
   const t=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
   const d=h/(2*t*ppu);
-  const ty=VIEW.bottom+h/(2*ppu)-VIEW.botPad/ppu, tx=VIEW.cx+panelW/(2*ppu);
+  const ty=VIEW.bottom+h/(2*ppu)-(VIEW.botPad+extra/2)/ppu, tx=VIEW.cx;
   const a=THREE.MathUtils.degToRad(8);
   camera.position.set(tx,ty+d*Math.sin(a),d*Math.cos(a));
   controls.target.set(tx,ty,0);
@@ -228,10 +227,10 @@ scene.add(new THREE.HemisphereLight(0xffffff,0x8fae8f,1.25));
 const sunL=new THREE.DirectionalLight(0xffffff,1.7);sunL.position.set(-30,50,40);scene.add(sunL);
 {const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const gr=g.createRadialGradient(64,64,6,64,64,64);
  gr.addColorStop(0,'rgba(255,255,230,1)');gr.addColorStop(.35,'rgba(255,236,150,.95)');gr.addColorStop(1,'rgba(255,236,150,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);
- const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));sp.scale.set(12,12,1);sp.position.set(-26,30,-30);scene.add(sp);}
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));sp.scale.set(14,14,1);sp.position.set(-30,32,-34);scene.add(sp);}
 
 // 地形
-const NX=92,NZ=60;
+const NX=168,NZ=44;
 const terrGeo=new THREE.BufferGeometry();
 {const pos=new Float32Array((NX+1)*(NZ+1)*3),col=new Float32Array((NX+1)*(NZ+1)*3),idx=[];
  for(let j=0;j<NZ;j++)for(let i=0;i<NX;i++){const a=j*(NX+1)+i,b=a+1,c=a+NX+1,d=c+1;idx.push(a,c,b,b,c,d);}
@@ -243,24 +242,24 @@ const frontGeo=new THREE.BufferGeometry();
 scene.add(new THREE.Mesh(frontGeo,new THREE.MeshBasicMaterial({color:0xb48a58,side:THREE.DoubleSide})));
 {const W=TX1-TX0,D=TZ1-TZ0;
  const base=new THREE.Mesh(new THREE.BoxGeometry(W+0.1,4,D+0.1),new THREE.MeshLambertMaterial({color:0xa27b4e}));base.position.set((TX0+TX1)/2,-2.03,(TZ0+TZ1)/2);scene.add(base);
- const sea=new THREE.Mesh(new THREE.BoxGeometry(10.1,4.2,D+0.1),new THREE.MeshLambertMaterial({color:0x3f8fd8}));sea.position.set(-26,-1.96,(TZ0+TZ1)/2);scene.add(sea);}
+ const sea=new THREE.Mesh(new THREE.BoxGeometry(14.1,4.2,D+0.3),new THREE.MeshLambertMaterial({color:0x3f8fd8}));sea.position.set(-39,-1.96,(TZ0+TZ1)/2+0.1);scene.add(sea);}
 const cGrass=new THREE.Color(0x86cc6c),cSand=new THREE.Color(0xe9dba2),cForest=new THREE.Color(0x4f9a55),cRock=new THREE.Color(0x9c907c),cSnow=new THREE.Color(0xffffff),cTmp=new THREE.Color();
-const TREES=70, trees=new THREE.InstancedMesh(new THREE.ConeGeometry(0.55,1.5,6),new THREE.MeshLambertMaterial({color:0x2f7d46,flatShading:true}),TREES);scene.add(trees);
-const treeXZ=[];{const r=seeded(7);for(let i=0;i<TREES;i++){let x,z;do{x=-18+r()*32;z=-21+r()*28;}while(z>-1.5&&z<5.5);treeXZ.push([x,z,0.7+r()*0.7]);}}
+const TREES=80, trees=new THREE.InstancedMesh(new THREE.ConeGeometry(0.55,1.5,6),new THREE.MeshLambertMaterial({color:0x2f7d46,flatShading:true}),TREES);scene.add(trees);
+const treeXZ=[];{const r=seeded(7);for(let i=0;i<TREES;i++){let x,z;do{x=-29+r()*65;z=-13+r()*20;}while(z>-1.5&&z<5.5);treeXZ.push([x,z,0.7+r()*0.7]);}}
 const M4=new THREE.Matrix4(),Q0=new THREE.Quaternion(),V3=new THREE.Vector3(),SC=new THREE.Vector3();
 function rebuildTerrain(){
   const pos=terrGeo.attributes.position,col=terrGeo.attributes.color;
   for(let j=0;j<=NZ;j++)for(let i=0;i<=NX;i++){
     const k=j*(NX+1)+i,x=lerp(TX0,TX1,i/NX),z=lerp(TZ0,TZ1,j/NZ),h=terrainH(x,z);
     pos.setXYZ(k,x,h,z);
-    if(x<-19.5)cTmp.copy(cSand);else if(h<12)cTmp.copy(cGrass).lerp(cForest,h/12);else if(h<23)cTmp.copy(cForest).lerp(cRock,smooth(12,18,h));else cTmp.copy(cRock).lerp(cSnow,smooth(23,25.5,h));
+    if(x<-30.5)cTmp.copy(cSand);else if(h<12)cTmp.copy(cGrass).lerp(cForest,h/12);else if(h<23)cTmp.copy(cForest).lerp(cRock,smooth(12,18,h));else cTmp.copy(cRock).lerp(cSnow,smooth(23,25.5,h));
     col.setXYZ(k,cTmp.r,cTmp.g,cTmp.b);
   }
   pos.needsUpdate=true;col.needsUpdate=true;terrGeo.computeVertexNormals();
   const fp=frontGeo.attributes.position;
   for(let i=0;i<=NX;i++){const x=lerp(TX0,TX1,i/NX);fp.setXYZ(i*2,x,terrainH(x,TZ1),TZ1);fp.setXYZ(i*2+1,x,-0.03,TZ1);}
   fp.needsUpdate=true;frontGeo.computeBoundingSphere();terrGeo.computeBoundingSphere();
-  treeXZ.forEach(([x,z,s],i)=>{const h=terrainH(x,z);const sc=(h<15&&x>-19)?s:0.0001;M4.compose(V3.set(x,h+0.75*sc,z),Q0,SC.set(sc,sc,sc));trees.setMatrixAt(i,M4);});
+  treeXZ.forEach(([x,z,s],i)=>{const h=terrainH(x,z);const sc=(h<15&&x>-30)?s:0.0001;M4.compose(V3.set(x,h+0.75*sc,z),Q0,SC.set(sc,sc,sc));trees.setMatrixAt(i,M4);});
   trees.instanceMatrix.needsUpdate=true;
 }
 
@@ -280,25 +279,33 @@ function makeLabel(segs,o={}){
 }
 let airLabel=null,cloudLabel=null;
 function buildLabels(){
-  const sea=makeLabel([['海','うみ']]);sea.position.set(-26,2.3,7.5);scene.add(sea);
-  const wind=makeLabel([['風','かぜ'],[' ➡','']],{color:'#0b63b8'});wind.position.set(-23.5,7.2,6);scene.add(wind);
+  const sea=makeLabel([['海','うみ']]);sea.position.set(-43.6,1.4,7.5);scene.add(sea);
+  const wind=makeLabel([['風','かぜ']],{color:'#0b63b8'});wind.position.set(-41.5,19.2,5);scene.add(wind);
   airLabel=makeLabel([['空気','くうき'],['のかたまり','']]);scene.add(airLabel);
   cloudLabel=makeLabel([['雲','くも']],{bg:'rgba(227,241,255,.96)'});scene.add(cloudLabel);
 }
 
-/* ===== 空気のかたまり：白っぽい水色のふわっとした塊 → そのまま雲になる（別の雲は出さない） ===== */
+/* ===== 空気のかたまり：うすく透明な水色の塊 → その同じ塊がグレーの雲に変わる（別の雲は出さない） ===== */
 const parcel=new THREE.Group();scene.add(parcel);
-const cAir=new THREE.Color(0xd9f0ff),cAirEm=new THREE.Color(0x9fcdf0),cWhite=new THREE.Color(0xffffff),cCloudEm=new THREE.Color(0x8a919a),cRain=new THREE.Color(0xaab2bd),cRainEm=new THREE.Color(0x4f5762);
-const puffMat=new THREE.MeshStandardMaterial({color:cAir,emissive:cAirEm,emissiveIntensity:0.55,roughness:1,transparent:true,opacity:0.6,depthWrite:false});
-const puffGeo=new THREE.SphereGeometry(1,22,16);
-// [x,y,z,大きさ]（rに対する比）。core＝最初からある塊、extra＝雲になるにつれて外にふくらむもこもこ
-const CORE=[[0,0,0,1.0],[-0.85,-0.1,0.1,0.72],[0.85,-0.05,0,0.75],[-0.35,0.45,0.15,0.68],[0.4,0.5,-0.05,0.65],[0,-0.25,0.3,0.6],[0.05,0.1,0.45,0.55]];
-const EXTRA=[[-1.5,-0.2,0,0.6],[1.55,-0.15,0.05,0.62],[-0.95,0.85,0,0.55],[1.0,0.9,0.1,0.5],[0.1,1.15,0,0.5],[0,-0.55,0.1,0.55]];
-const puffs=[];
-CORE.concat(EXTRA).forEach((d,i)=>{const m=new THREE.Mesh(puffGeo,puffMat);m.renderOrder=5;
-  m.userData={x:d[0],y:d[1],z:d[2],s:d[3],extra:i>=CORE.length,ph:i*1.7};parcel.add(m);puffs.push(m);});
+const cAir=new THREE.Color(0xcfe9ff),cAirEm=new THREE.Color(0x8fc4ee),cCloud=new THREE.Color(0xbfc6cf),cCloudEm=new THREE.Color(0x4c535c),cRain=new THREE.Color(0x8e97a3),cRainEm=new THREE.Color(0x2f353c),cRimAir=new THREE.Color(0x6fb2ea),cRimCloud=new THREE.Color(0x7d8794);
+const blobMat=new THREE.MeshStandardMaterial({color:cAir,emissive:cAirEm,emissiveIntensity:0.4,roughness:0.6,transparent:true,opacity:0.2,depthWrite:false});
+const rimMat=new THREE.MeshBasicMaterial({color:cRimAir,transparent:true,opacity:0.5,depthWrite:false,side:THREE.BackSide});   // ふちどり（透明なしゃぼん玉のように見せる）
+const blobGeo=(()=>{const g=new THREE.IcosahedronGeometry(1,12);g.deleteAttribute('normal');g.deleteAttribute('uv');const m=mergeVertices(g);m.computeVertexNormals();return m;})();
+const blobBase=blobGeo.attributes.position.array.slice();
+const blob=new THREE.Mesh(blobGeo,blobMat),rimMesh=new THREE.Mesh(blobGeo,rimMat);
+rimMesh.scale.setScalar(1.05);blob.renderOrder=5;rimMesh.renderOrder=4;blob.frustumCulled=false;rimMesh.frustumCulled=false;
+parcel.add(rimMesh,blob);
+function shapeBlob(t,ca){   // ゆるやかにゆれる塊。雲になるほど表面がもこもこする
+  const pos=blobGeo.attributes.position,b=blobBase,n=pos.count;
+  for(let i=0;i<n;i++){const x=b[i*3],y=b[i*3+1],z=b[i*3+2];
+    const n1=Math.sin(1.7*x+0.9*y+t*0.5)*Math.cos(1.3*y-1.1*z+t*0.4);
+    const n2=Math.sin(4.1*x+2.3*z+t*0.9)*Math.sin(3.7*y+1.9*x-t*0.7)+0.5*Math.sin(5.3*z+t*0.6);
+    const rr=1+0.07*n1+ca*0.17*n2;
+    pos.setXYZ(i,x*rr,y*rr,z*rr);}
+  pos.needsUpdate=true;blobGeo.computeVertexNormals();
+}
 function parcelPos(r){   // 斜面にめりこまないよう、斜面の法線方向に少しはなして置く
-  const pt=pathAt(S.p),off=r*0.95+0.25;
+  const pt=pathAt(S.p),off=r*1.05+0.3;
   if(S.p>=PB)return {x:pt.x,y:pt.h/100+off};
   const s=(terrainH(pt.x+0.15,ZP)-terrainH(pt.x-0.15,ZP))/0.3,n=Math.sqrt(1+s*s);
   return {x:pt.x-s/n*off,y:pt.h/100+off/n};
@@ -308,10 +315,14 @@ function parcelPos(r){   // 斜面にめりこまないよう、斜面の法線�
 const rain=new THREE.InstancedMesh(new THREE.BoxGeometry(0.13,1,0.13),new THREE.MeshBasicMaterial({color:0x2f6fe0}),CFG.rainDrops);
 rain.instanceMatrix.setUsage(THREE.DynamicDrawUsage);rain.frustumCulled=false;scene.add(rain);
 const drops=[];{const r=seeded(41);for(let i=0;i<CFG.rainDrops;i++)drops.push({u:r(),zz:r()*2-1,ph:r(),sp:0.9+r()*0.6});}
-// 風のすじ
-const WIND=18,windGeo=new THREE.BufferGeometry();windGeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(WIND*6),3));
-const windLines=new THREE.LineSegments(windGeo,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.7}));windLines.frustumCulled=false;scene.add(windLines);
-const winds=[];{const r=seeded(53);for(let i=0;i<WIND;i++)winds.push({z:-8+r()*14,ph:r(),sp:0.06+r()*0.05,off:0.7+r()*1.6});}
+// 風：海から山へふく向きを、大きな矢印（ゆっくり右へ進んで消える）で見せる
+const windArrows=[];
+[[12.2,0.15],[15.7,0.6]].forEach(([y,ph])=>{
+  const mat=new THREE.MeshBasicMaterial({color:0x3b86e0,transparent:true,opacity:0.9,depthWrite:false}),g=new THREE.Group();
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,5,12),mat);shaft.rotation.z=-Math.PI/2;shaft.position.x=-1.0;
+  const head=new THREE.Mesh(new THREE.ConeGeometry(0.95,2,16),mat);head.rotation.z=-Math.PI/2;head.position.x=2.5;
+  g.add(shaft,head);g.userData={y,ph,mat};scene.add(g);windArrows.push(g);
+});
 
 /* ===================== 音（Web Audio） ===================== */
 let AC=null,rainGain=null,master=null;
@@ -385,17 +396,17 @@ function update(dt){
 function updateVisuals(dt){
   const t=S.elapsed,r=CFG.parcelR0*(1+CFG.parcelGrow*S.h/1000),pp=parcelPos(r),ca=S.cloudAmt,ra=S.rainAmt;
   parcel.position.set(pp.x,pp.y,ZP);
-  // 色：白っぽい水色 → 白い雲 → 雨雲のグレー（同じ塊のまま変わる）
-  puffMat.color.copy(cAir).lerp(cWhite,ca).lerp(cRain,ra);
-  puffMat.emissive.copy(cAirEm).lerp(cCloudEm,ca).lerp(cRainEm,ra);
-  puffMat.opacity=lerp(0.6,0.97,ca);
-  // 形：ぎゅっとまとまった塊 → もこもこの雲
-  const sp=lerp(0.62,1.05,ca);
-  puffs.forEach(m=>{const u=m.userData,wob=1+0.04*Math.sin(t*1.6+u.ph);
-    const sc=Math.max(0.0001,u.extra?u.s*r*ca*1.25*wob:u.s*r*lerp(0.95,1.2,ca)*wob),k=u.extra?1.1:1;
-    m.position.set(u.x*r*sp*k,u.y*r*sp,u.z*r*sp);m.scale.set(sc*1.1,sc*0.92,sc*0.95);});
+  // 色：うすい水色（透明）→ 雲ができ始めたらすぐグレーに → 雨のときはもっと濃いグレー（同じ塊のまま変わる）
+  const cg=Math.pow(ca,0.6);
+  blobMat.color.copy(cAir).lerp(cCloud,cg).lerp(cRain,ra);
+  blobMat.emissive.copy(cAirEm).lerp(cCloudEm,cg).lerp(cRainEm,ra);
+  blobMat.opacity=lerp(0.2,0.93,Math.pow(ca,0.8));
+  rimMat.color.copy(cRimAir).lerp(cRimCloud,cg);rimMat.opacity=lerp(0.5,0,ca);
+  shapeBlob(t,ca);
+  const grow=1+0.12*ca;
+  parcel.scale.set(r*1.12*grow,r*0.95*grow,r*grow);
   if(airLabel){airLabel.position.set(pp.x,pp.y+r*1.3+1.5,ZP);airLabel.visible=ca<0.35;}
-  if(cloudLabel){cloudLabel.position.set(pp.x,pp.y+r*1.55+1.2,ZP);cloudLabel.visible=ca>=0.35;}
+  if(cloudLabel){cloudLabel.position.set(pp.x+r*1.7+2.2,pp.y+0.4,ZP);cloudLabel.visible=ca>=0.35;}
   // 雨：雲になった塊の下から落ちる
   const nR=Math.round(CFG.rainDrops*ra);
   if(nR>0||rain.count>0){
@@ -404,10 +415,9 @@ function updateVisuals(dt){
     rain.count=nR;rain.instanceMatrix.needsUpdate=true;
   }
   if(rainGain&&AC)rainGain.gain.setTargetAtTime(0.1*ra,AC.currentTime,0.2);
-  // 風
-  const wp=windGeo.attributes.position;
-  winds.forEach((w,i)=>{const x=TX0+((t*w.sp+w.ph)%1)*(TX1-TX0-3),x2=x-2.6;wp.setXYZ(i*2,x,terrainH(x,w.z)+w.off,w.z);wp.setXYZ(i*2+1,x2,terrainH(x2,w.z)+w.off,w.z);});
-  wp.needsUpdate=true;
+  // 風の矢印
+  windArrows.forEach(g=>{const u=g.userData,ph=(t*0.16+u.ph)%1;
+    g.position.set(-41.5+ph*4,u.y,5);u.mat.opacity=0.92*Math.min(1,Math.sin(Math.PI*ph)*2.2);});
 }
 
 /* ===================== 操作 ===================== */
@@ -463,7 +473,7 @@ requestAnimationFrame(loop);
    空気のかたまり（parcel）は .position ではなく S.p（経路上の進みぐあい 0〜1）で動かしている。
    位置・気温・雲の量などはすべて derive() が S.p から計算し、updateVisuals() が parcel.position に反映する。 */
 window.__game={
-  state:S,CFG,camera,scene,parcel,puffs,
+  state:S,CFG,camera,scene,parcel,blob,
   api:{
     tick(n=1,dt=1/60){for(let i=0;i<n;i++)update(dt);syncUI(true);renderer.render(scene,camera);return this.info();},
     start(){S.started=true;showHelp(false);},
