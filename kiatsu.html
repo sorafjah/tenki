@@ -33,13 +33,17 @@
     font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;}
   #ver{position:absolute;left:12px;bottom:6px;font-size:11px;color:#1c2b3a;opacity:.6;pointer-events:none;}
 
-  /* 右のまとめカード：背景は空のつづき */
-  #panel{position:absolute;right:12px;top:78px;width:var(--pw);display:flex;flex-direction:column;gap:10px;pointer-events:none;}
-  .card{border:3px solid #1c2b3a;border-radius:12px;background:rgba(255,255,255,.93);text-align:center;font-weight:700;line-height:1.8;padding:2px 6px 4px;}
+  /* 右のカード：見たい場面をえらぶボタン（背景は空のつづき） */
+  #panel{position:absolute;right:16px;top:78px;width:calc(var(--pw) - 8px);display:flex;flex-direction:column;gap:12px;pointer-events:none;}
+  .card{pointer-events:auto;display:block;width:100%;cursor:pointer;border:3px solid #1c2b3a;border-radius:12px;background:rgba(255,255,255,.93);
+    text-align:center;font-weight:700;line-height:1.8;padding:2px 6px 4px;}
+  .card:active{transform:translateY(2px);}
+  .card.sel{box-shadow:0 0 0 5px #ffd84d;}
   .card .nm{font-size:19px;color:#fff;border-radius:8px;margin:4px 0 2px;}
   .card.h .nm{background:#2f5fd0;} .card.l .nm{background:#d9453a;}
   .card .wx{font-size:21px;min-height:1.8em;}
   .card .wx.q{opacity:.35;}
+  .card.b{background:#bfe6ff;font-size:19px;min-height:56px;padding:4px 8px;}
 
   #bar{background:#f2faff;border-top:3px solid #1c2b3a;padding:8px 10px;display:flex;gap:8px;align-items:center;}
   #bar button{min-height:56px;min-width:56px;border-radius:14px;border:3px solid #1c2b3a;background:#bfe6ff;font-size:19px;font-weight:700;padding:0 14px;line-height:1.6;white-space:nowrap;}
@@ -60,17 +64,18 @@
   .how .ic{min-width:92px;height:44px;border:3px solid #1c2b3a;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;padding:0 8px;background:#bfe6ff;white-space:nowrap;}
   #startBtn{display:block;margin:0 auto;min-width:240px;min-height:64px;border-radius:32px;border:4px solid #1c2b3a;background:#4cc36a;color:#fff;font-size:26px;font-weight:700;line-height:1.6;}
 
-  @media (max-width:760px){ body{--pw:150px;} .card .nm{font-size:16px;} .card .wx{font-size:17px;} }
+  @media (max-width:760px){ body{--pw:160px;} .card .nm{font-size:16px;} .card .wx{font-size:17px;} .card.b{font-size:16px;} }
 </style>
 </head>
 <body>
-<!-- build: 2026-11-10a -->
+<!-- build: 2026-11-11a -->
 <div id="stage">
   <div id="caption"></div>
   <button id="helpBtn" aria-label="せつめい">？</button>
   <div id="panel">
-    <div class="card h"><div class="nm"><ruby>高気圧<rt>こうきあつ</rt></ruby></div><div class="wx q" id="hWx">？</div></div>
-    <div class="card l"><div class="nm"><ruby>低気圧<rt>ていきあつ</rt></ruby></div><div class="wx q" id="lWx">？</div></div>
+    <button class="card h" id="selH"><div class="nm">▶ <ruby>高気圧<rt>こうきあつ</rt></ruby></div><div class="wx q" id="hWx">？</div></button>
+    <button class="card l" id="selL"><div class="nm">▶ <ruby>低気圧<rt>ていきあつ</rt></ruby></div><div class="wx q" id="lWx">？</div></button>
+    <button class="card b" id="selB">いっしょに<ruby>見<rt>み</rt></ruby>る</button>
   </div>
   <div id="ver"></div>
 </div>
@@ -88,6 +93,7 @@
     <h1>🌀 <ruby>高気圧<rt>こうきあつ</rt></ruby>と<ruby>低気圧<rt>ていきあつ</rt></ruby></h1>
     <p><ruby>高気圧<rt>こうきあつ</rt></ruby>と<ruby>低気圧<rt>ていきあつ</rt></ruby>で、<ruby>空気<rt>くうき</rt></ruby>がどう<ruby>動<rt>うご</rt></ruby>き、<ruby>天気<rt>てんき</rt></ruby>がどうなるかを<ruby>見<rt>み</rt></ruby>ます。</p>
     <div class="how">
+      <div class="ic">▶ <ruby>高気圧<rt>こうきあつ</rt></ruby></div><div><ruby>右<rt>みぎ</rt></ruby>のカードをおすと、<ruby>高気圧<rt>こうきあつ</rt></ruby>だけ・<ruby>低気圧<rt>ていきあつ</rt></ruby>だけを<ruby>最初<rt>さいしょ</rt></ruby>から<ruby>見<rt>み</rt></ruby>られます。「いっしょに<ruby>見<rt>み</rt></ruby>る」で<ruby>両方<rt>りょうほう</rt></ruby>を<ruby>見<rt>み</rt></ruby>ます</div>
       <div class="ic">⏭ <ruby>次<rt>つぎ</rt></ruby>へ</div><div>1だんかいずつ<ruby>進<rt>すす</rt></ruby>めて<ruby>止<rt>と</rt></ruby>まります</div>
       <div class="ic">▶ <ruby>自動<rt>じどう</rt></ruby></div><div><ruby>最後<rt>さいご</rt></ruby>まで<ruby>自動<rt>じどう</rt></ruby>で<ruby>進<rt>すす</rt></ruby>みます（もう<ruby>一度<rt>いちど</rt></ruby>おすと<ruby>止<rt>と</rt></ruby>まる）</div>
       <div class="ic">●━━━</div><div>スライダーで<ruby>好<rt>す</rt></ruby>きな<ruby>場面<rt>ばめん</rt></ruby>に<ruby>動<rt>うご</rt></ruby>かせます</div>
@@ -100,19 +106,22 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* ===================== 設定（ここの数値だけ直せば調整できます） ===================== */
 const CFG = {
-  version: 'v2026-11-10a',
-  duration: 44,                // 自動で最初から最後まで進む秒数
+  version: 'v2026-11-11a',
+  startScene: 'H',             // 最初に見る場面：'H'（高気圧）/ 'L'（低気圧）/ 'B'（いっしょ）
+  stepSeconds: 10,             // 1だんかい（「次へ」1回ぶん）にかける秒数。自動のときの全体は「だんかい数 × この秒数」
   stepSpeed: 1.5,              // 「次へ」で進むときの速さ（自動の何倍か）
-  steps: [0.18,0.38,0.58,0.86,1],   // 「次へ」で止まる場所（進みぐあい 0〜1）
-  highX: -22, lowX: 22,        // 高気圧・低気圧の中心の位置（左右）
-  spiralR: 15,                 // 地上の風のうずの半径
+  highX: -23, lowX: 23,        // 高気圧・低気圧の中心の位置（左右）。地面は左右の2つに分かれていて、間に隙間がある
+  spiralR: 15,                 // 地面の風のうずの半径
   spiralTwist: 1.3,            // うずの曲がりぐあい（大きいほどよく曲がる）
-  spiralSpeed: 0.11,           // 地上の風の矢印の速さ
-  columnSpeed: 0.16,           // 上下に動く矢印の速さ
+  ringR: 3.6,                  // 上下に動く矢印が並ぶ円の半径
+  topY: 24,                    // 高気圧：空気の矢印がおりはじめる高さ
+  riseY: 16.5,                 // 低気圧：空気の矢印が上がる高さ（雲の下まで）
+  sunY: 37,                    // 太陽の高さ
+  flowSpeed: 5.5,              // 矢印が流れる速さ
   viewTilt: 33,                // 見下ろす角度（度）
   colHigh: 0x2f5fd0,           // 高気圧の色（天気図と同じ青）
   colLow: 0xd9453a,            // 低気圧の色（天気図と同じ赤）
@@ -120,6 +129,8 @@ const CFG = {
   rainDrops: 170,
   sound: true,
 };
+const LAND = { H:{x0:-44,x1:-3}, L:{x0:3,x1:44}, z0:-17, z1:17 };   // 地面（左・右）。x1(-3)とx0(3)の間が隙間
+const SCENES = { H:{N:2}, L:{N:3}, B:{N:3} };                         // 場面ごとの「次へ」の回数
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -127,19 +138,23 @@ const smooth=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t);};
 function seeded(s){return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
 
 /* ===================== 状態 =====================
-   すべての見た目は S.p（進みぐあい 0〜1）から derive() が計算する。
-   0.00〜 高気圧と下降する空気 ／ 0.20〜 ふき出す風・晴れ ／ 0.40〜 低気圧とふきこむ風
-   0.60〜 上昇する空気・雲・雨 ／ 0.88〜 高気圧から低気圧への風 */
+   すべての見た目は S.scene（場面）と S.p（進みぐあい 0〜1）から derive() が計算する。
+   場面 H：高気圧だけ ／ L：低気圧だけ ／ B：いっしょ。 「次へ」の k回目 ＝ p が k/N。 */
 const S = {
-  p: 0, mode: 'idle', targetP: 0, stage: 0,
-  aHigh: 0, aOut: 0, aLow: 0, aUp: 0, cloud: 0, rain: 0, aWind: 0,
+  scene: CFG.startScene, p: 0, mode: 'idle', targetP: 0, stage: 0,
+  revH: 0, revL: 0, sun: 0, cloud: 0, rain: 0, wind: 0,   // 矢印が流れる道すじのどこまで見せるか(0〜1)など
+  actH: 0, actL: 0,                                        // 高気圧・低気圧が今の場面で使われているか（なめらかに0↔1）
   paused: true, started: false, mute: false, frames: 0, elapsed: 0,
 };
+let FV=0.5, FG=0.5;   // 高気圧の道すじで「おりる部分」の割合／低気圧の道すじで「地面をふきこむ部分」の割合（道すじを作ったあとに計算）
 function derive(){
-  const p=S.p;
-  S.aHigh=smooth(0.01,0.1,p); S.aOut=smooth(0.2,0.3,p); S.aLow=smooth(0.4,0.5,p);
-  S.aUp=smooth(0.6,0.67,p); S.cloud=smooth(0.64,0.8,p); S.rain=smooth(0.8,0.86,p); S.aWind=smooth(0.88,0.96,p);
-  S.stage = p<0.01?0 : p<0.2?1 : p<0.4?2 : p<0.6?3 : p<0.88?4 : 5;
+  const N=SCENES[S.scene].N, p=S.p, r=k=>smooth((k-1)/N,(k-1+0.6)/N,p);
+  let st=0;for(let k=1;k<=N;k++)if(p>=(k-1+0.3)/N)st=k;
+  S.stage=st;
+  S.revH=S.revL=S.sun=S.cloud=S.rain=S.wind=0;
+  if(S.scene==='H'){S.revH=FV*r(1)+(1-FV)*r(2);S.sun=r(2);}
+  else if(S.scene==='L'){S.revL=FG*r(1)+(1-FG)*r(2);const c=r(3);S.cloud=smooth(0,0.6,c);S.rain=smooth(0.5,1,c);}
+  else{S.revH=FV*r(1)+(1-FV)*r(2);S.revL=FG*r(1)+(1-FG)*r(2);S.sun=r(2);const c=r(2);S.cloud=smooth(0.25,0.8,c);S.rain=smooth(0.6,1,c);S.wind=r(3);}
 }
 
 /* ===================== Three.js 準備 ===================== */
@@ -156,8 +171,7 @@ controls.enablePan=false; controls.enableDamping=true; controls.dampingFactor=0.
 controls.minPolarAngle=THREE.MathUtils.degToRad(25); controls.maxPolarAngle=THREE.MathUtils.degToRad(85);
 controls.minAzimuthAngle=-0.7; controls.maxAzimuthAngle=0.7;
 /* 景色（地面〜雲・太陽）が、説明文の下にできるだけ大きく入るようにカメラを置く */
-const LAND={x0:-44,x1:44,z0:-17,z1:17};
-const VIEW={w:102,yTop:35,zTop:-6,yBot:-3.5,zBot:17,botPad:22};
+const VIEW={w:96,yTop:44,zTop:-8,yBot:-3.5,zBot:17,botPad:22};
 function fitView(){
   const w=stageEl.clientWidth||800,h=stageEl.clientHeight||600;
   renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
@@ -182,20 +196,24 @@ function fitView(){
 scene.add(new THREE.HemisphereLight(0xffffff,0x8fae8f,1.25));
 const sunL=new THREE.DirectionalLight(0xffffff,1.7);sunL.position.set(-30,50,40);scene.add(sunL);
 
-// 地面（平らな土地）
-{const W=LAND.x1-LAND.x0,D=LAND.z1-LAND.z0,NX=44,NZ=17;
- const g=new THREE.PlaneGeometry(W,D,NX,NZ);g.rotateX(-Math.PI/2);
- const col=new Float32Array(g.attributes.position.count*3),r=seeded(5),c1=new THREE.Color(0x8fd273),c2=new THREE.Color(0x7cc463),ct=new THREE.Color();
- for(let i=0;i<g.attributes.position.count;i++){ct.copy(c1).lerp(c2,r());col[i*3]=ct.r;col[i*3+1]=ct.g;col[i*3+2]=ct.b;}
- g.setAttribute('color',new THREE.BufferAttribute(col,3));
- const m=new THREE.Mesh(g.toNonIndexed(),new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true}));scene.add(m);
- const base=new THREE.Mesh(new THREE.BoxGeometry(W,3.5,D),new THREE.MeshLambertMaterial({color:0xa27b4e}));base.position.set(0,-1.78,0);scene.add(base);}
+// 地面：高気圧の地面と低気圧の地面の2つ（間に隙間）
 const M4=new THREE.Matrix4(),Q0=new THREE.Quaternion(),V3=new THREE.Vector3(),SC=new THREE.Vector3();
-{const N=46,trees=new THREE.InstancedMesh(new THREE.ConeGeometry(0.6,1.7,6),new THREE.MeshLambertMaterial({color:0x2f7d46,flatShading:true}),N),r=seeded(7);
- for(let i=0;i<N;i++){let x,z;do{x=LAND.x0+1+r()*(LAND.x1-LAND.x0-2);z=LAND.z0+0.8+r()*4.2;}
-   while(Math.hypot(x-CFG.highX,z)<CFG.spiralR+1.2||Math.hypot(x-CFG.lowX,z)<CFG.spiralR+1.2);
-   const s=0.7+r()*0.7;M4.compose(V3.set(x,0.85*s,z),Q0,SC.set(s,s,s));trees.setMatrixAt(i,M4);}
- scene.add(trees);}
+function makeLand(x0,x1,cx,seed){
+  const W=x1-x0,D=LAND.z1-LAND.z0,xm=(x0+x1)/2;
+  const g=new THREE.PlaneGeometry(W,D,Math.round(W/2),17);g.rotateX(-Math.PI/2);g.translate(xm,0,0);
+  const n=g.attributes.position.count,col=new Float32Array(n*3),r=seeded(seed),c1=new THREE.Color(0x8fd273),c2=new THREE.Color(0x7cc463),ct=new THREE.Color();
+  for(let i=0;i<n;i++){ct.copy(c1).lerp(c2,r());col[i*3]=ct.r;col[i*3+1]=ct.g;col[i*3+2]=ct.b;}
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));
+  scene.add(new THREE.Mesh(g.toNonIndexed(),new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true})));
+  const base=new THREE.Mesh(new THREE.BoxGeometry(W,3.5,D),new THREE.MeshLambertMaterial({color:0xa27b4e}));base.position.set(xm,-1.78,0);scene.add(base);
+  const NT=24,trees=new THREE.InstancedMesh(new THREE.ConeGeometry(0.6,1.7,6),new THREE.MeshLambertMaterial({color:0x2f7d46,flatShading:true}),NT),rr=seeded(seed+3);
+  let c=0,guard=0;
+  while(c<NT&&guard++<4000){const x=x0+1+rr()*(W-2),z=LAND.z0+1+rr()*(D-2);if(Math.hypot(x-cx,z)<CFG.spiralR+1.6)continue;   // 矢印のうずの中には木を置かない
+    const s=0.7+rr()*0.7;M4.compose(V3.set(x,0.85*s,z),Q0,SC.set(s,s,s));trees.setMatrixAt(c++,M4);}
+  trees.count=c;scene.add(trees);
+}
+makeLand(LAND.H.x0,LAND.H.x1,CFG.highX,5);
+makeLand(LAND.L.x0,LAND.L.x1,CFG.lowX,9);
 
 // 文字ラベル（ふりがな付き）
 function makeLabel(segs,o={}){
@@ -216,43 +234,45 @@ const L={};   // 3Dの中の文字。フォントの読みこみ後に作る
 function buildLabels(){
   L.high=makeLabel([['高気圧','こうきあつ']],{color:'#fff',bg:css(CFG.colHigh),h:3.6});L.high.position.set(CFG.highX,2.4,LAND.z1+0.6);scene.add(L.high);
   L.low=makeLabel([['低気圧','ていきあつ']],{color:'#fff',bg:css(CFG.colLow),h:3.6});L.low.position.set(CFG.lowX,2.4,LAND.z1+0.6);scene.add(L.low);
-  L.down=makeLabel([['空気','くうき'],['がおりる','']],{color:css(CFG.colHigh)});L.down.position.set(CFG.highX+9.5,17,0);scene.add(L.down);
-  L.up=makeLabel([['空気','くうき'],['が','',],['上','あ'],['がる','']],{color:css(CFG.colLow)});L.up.position.set(CFG.lowX-9.5,9,0);scene.add(L.up);
-  L.wind=makeLabel([['風','かぜ']],{color:'#b45f00'});L.wind.position.set(0,3.4,13);scene.add(L.wind);
+  L.down=makeLabel([['空気','くうき'],['がおりる','']],{color:css(CFG.colHigh)});L.down.position.set(CFG.highX+9,16,0);scene.add(L.down);
+  L.up=makeLabel([['空気','くうき'],['が','',],['上','あ'],['がる','']],{color:css(CFG.colLow)});L.up.position.set(CFG.lowX-9,10,0);scene.add(L.up);
+  L.wind=makeLabel([['風','かぜ']],{color:'#b45f00'});L.wind.position.set(0,3.6,13);scene.add(L.wind);
 }
 
-/* ===== 矢印 ===== */
-// 地面にねかせた平たい矢印（+x 向き）
-const flatArrowGeo=(()=>{const s=new THREE.Shape();s.moveTo(-1.9,-0.38);s.lineTo(0.5,-0.38);s.lineTo(0.5,-1.0);s.lineTo(1.9,0);s.lineTo(0.5,1.0);s.lineTo(0.5,0.38);s.lineTo(-1.9,0.38);s.closePath();
-  const g=new THREE.ShapeGeometry(s);g.rotateX(-Math.PI/2);return g;})();
-function flatArrow(color,scale=1){const m=new THREE.Mesh(flatArrowGeo,new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));
-  m.scale.setScalar(scale);m.renderOrder=3;scene.add(m);return m;}
-// 立体の矢印（上向き。下向きはひっくり返す）
-function solidArrow(color,down){const mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false}),g=new THREE.Group();
-  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.34,3.4,12),mat);shaft.position.y=-0.9;
-  const head=new THREE.Mesh(new THREE.ConeGeometry(1.0,2.0,16),mat);head.position.y=1.8;
-  g.add(shaft,head);if(down)g.rotation.z=Math.PI;g.userData.mat=mat;scene.add(g);return g;}
-
-// 地上の風のうず：高気圧は時計回りにふき出す／低気圧は反時計回りにふきこむ（上から見て。北半球）
-const ARMS=5;
-function spiralPos(sys,arm,u,out){
-  const phi0=arm/ARMS*Math.PI*2;u=clamp(u,0,1);
-  if(sys==='H'){const r=lerp(3.4,CFG.spiralR,u),phi=phi0+CFG.spiralTwist*u;out.x=CFG.highX+r*Math.sin(phi);out.z=-r*Math.cos(phi);}
-  else{const r=lerp(CFG.spiralR,3.4,u),phi=phi0-CFG.spiralTwist*u;out.x=CFG.lowX+r*Math.sin(phi);out.z=-r*Math.cos(phi);}
-  return out;
+/* ===== 空気の流れ：1本の道すじ（なめらかな曲線）の上を矢印が流れる =====
+   高気圧：上から空気がおりてきて、そのまま地面を時計回りにふき出す（おりる → 地面）
+   低気圧：地面を反時計回りにふきこんで、そのまま上へ上がる（地面 → 上がる）
+   上下の矢印と地面の矢印は同じ道すじなので、ちゃんと続きになる。 */
+const ARMS=5, TUBE_SEG=90, TUBE_RAD=6, ARROW_PER_PATH=3;
+const arrowGeo=(()=>{const a=new THREE.CylinderGeometry(0.3,0.3,2.2,10);a.rotateZ(-Math.PI/2);a.translate(-0.5,0,0);
+  const b=new THREE.ConeGeometry(0.85,1.8,14);b.rotateZ(-Math.PI/2);b.translate(1.5,0,0);return mergeGeometries([a,b]);})();   // +x向きの矢印
+function makeArrow(color,scale){const m=new THREE.Mesh(arrowGeo,new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false}));m.scale.setScalar(scale);m.renderOrder=3;m.visible=false;scene.add(m);return m;}
+function buildCurve(sys,arm){
+  const cx=sys==='H'?CFG.highX:CFG.lowX,phi0=arm/ARMS*Math.PI*2,tw=CFG.spiralTwist,R=CFG.spiralR,RV=CFG.ringR,pts=[];
+  const P=(r,phi,y)=>new THREE.Vector3(cx+r*Math.sin(phi),y,-r*Math.cos(phi));   // 上から見て phi が増えると時計回り
+  if(sys==='H'){
+    pts.push(P(RV,phi0,CFG.topY),P(RV,phi0,12),P(RV,phi0+0.02,6),P(RV+0.5,phi0+0.1,3),P(RV+1.8,phi0+0.28,1.5),P(RV+3.2,phi0+0.45,1.0));
+    for(let j=1;j<=9;j++){const u=j/9;pts.push(P(lerp(RV+4.4,R,u),phi0+0.6+(tw-0.6)*u,1.0));}
+  }else{
+    for(let j=0;j<=9;j++){const u=j/9;pts.push(P(lerp(R,RV+4.4,u),phi0-(tw-0.6)*u,1.0));}
+    const pe=phi0-(tw-0.6);
+    pts.push(P(RV+3.2,pe-0.15,1.0),P(RV+1.8,pe-0.32,1.5),P(RV+0.5,pe-0.44,3),P(RV,pe-0.5,6),P(RV,pe-0.52,12),P(RV,pe-0.52,CFG.riseY));
+  }
+  return new THREE.CatmullRomCurve3(pts,false,'centripetal');
 }
-const spirals=[];
-['H','L'].forEach(sys=>{for(let a=0;a<ARMS;a++)for(let k=0;k<2;k++)spirals.push({sys,arm:a,ph:k/2+a*0.13,mesh:flatArrow(sys==='H'?CFG.colHigh:CFG.colLow,1.45)});});
-// うずの道すじ（うすい線）
-const trailMats={H:new THREE.LineBasicMaterial({color:CFG.colHigh,transparent:true,opacity:0}),L:new THREE.LineBasicMaterial({color:CFG.colLow,transparent:true,opacity:0})};
-{const o={x:0,z:0};['H','L'].forEach(sys=>{for(let a=0;a<ARMS;a++){const pts=[];for(let i=0;i<=24;i++){spiralPos(sys,a,i/24,o);pts.push(new THREE.Vector3(o.x,0.08,o.z));}
-  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),trailMats[sys]));}});}
-// 上下に動く矢印
-const columns=[];
-[['H',CFG.highX,CFG.colHigh,true],['L',CFG.lowX,CFG.colLow,false]].forEach(([sys,cx,col,down])=>{
-  for(let i=0;i<4;i++){const ang=i/4*Math.PI*2+0.6;columns.push({sys,down,x:cx+Math.cos(ang)*2.3,z:Math.sin(ang)*2.3,ph:i/4,g:solidArrow(col,down)});}});
-// 高気圧 → 低気圧 の風
-const winds=[];[-7,0,7].forEach((z,i)=>winds.push({z,ph:i/3,mesh:flatArrow(CFG.colWind,2.3)}));
+const tubeMat={H:new THREE.MeshBasicMaterial({color:CFG.colHigh,transparent:true,opacity:0.3,depthWrite:false}),
+               L:new THREE.MeshBasicMaterial({color:CFG.colLow,transparent:true,opacity:0.3,depthWrite:false})};
+const paths=[];
+['H','L'].forEach(sys=>{for(let a=0;a<ARMS;a++){
+  const curve=buildCurve(sys,a),len=curve.getLength();
+  const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,TUBE_SEG,0.15,TUBE_RAD,false),tubeMat[sys]);tube.renderOrder=2;tube.geometry.setDrawRange(0,0);scene.add(tube);
+  const arrows=[];for(let k=0;k<ARROW_PER_PATH;k++)arrows.push({mesh:makeArrow(sys==='H'?CFG.colHigh:CFG.colLow,0.95),off:k/ARROW_PER_PATH*len+a*0.7});
+  paths.push({sys,curve,len,tube,arrows});}});
+function fracWhere(curve,test){const n=400;for(let i=0;i<=n;i++)if(test(curve.getPointAt(i/n)))return i/n;return 1;}
+FV=fracWhere(paths.find(q=>q.sys==='H').curve,p=>p.y<2.4);   // 高気圧：地面にとどくまで（＝おりる部分）
+FG=fracWhere(paths.find(q=>q.sys==='L').curve,p=>p.y>2.4);   // 低気圧：地面から上がりはじめるまで（＝ふきこむ部分）
+// 高気圧 → 低気圧 の風（2つの地面の隙間をこえて、まっすぐふく）
+const winds=[];[-7,0,7].forEach((z,i)=>winds.push({z,ph:i/3,mesh:makeArrow(CFG.colWind,1.9)}));
 
 // 中心の印（天気図の「高」「低」）
 function centerMark(ch,color,x){
@@ -268,7 +288,7 @@ let markH=null,markL=null;
 // 太陽（高気圧の上：晴れ）
 const sun=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');const gr=g.createRadialGradient(64,64,6,64,64,64);
   gr.addColorStop(0,'rgba(255,255,230,1)');gr.addColorStop(.35,'rgba(255,226,110,.98)');gr.addColorStop(1,'rgba(255,226,110,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,opacity:0}));sp.position.set(CFG.highX,29,-6);scene.add(sp);return sp;})();
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,opacity:0}));sp.position.set(CFG.highX,CFG.sunY,-8);scene.add(sp);return sp;})();
 
 // 雲（低気圧の上）：雲のでき方アプリと同じ、グレーのもこもこした塊
 const cCloud=new THREE.Color(0xbfc6cf),cCloudEm=new THREE.Color(0x4c535c),cRain=new THREE.Color(0x8e97a3),cRainEm=new THREE.Color(0x2f353c);
@@ -310,22 +330,25 @@ const sStage=()=>{tone(784,0.4,0.12);tone(1047,0.5,0.12,'sine',0.1);};
 
 /* ===================== 画面まわり ===================== */
 const R=(k,r)=>`<ruby>${k}<rt>${r}</rt></ruby>`;
-const KOU=R('高気圧','こうきあつ'),TEI=R('低気圧','ていきあつ'),KUUKI=R('空気','くうき');
-function captionHTML(){
-  switch(S.stage){
-    case 0:return `${KUUKI}が${R('地面','じめん')}をおす${R('力','ちから')}を「${R('気圧','きあつ')}」といいます。`;
-    case 1:return `${KOU}では、${R('上','うえ')}から${KUUKI}がおりてきます。`;
-    case 2:return `${KUUKI}は${R('時計回','とけいまわ')}りにふき${R('出','だ')}します。${R('雲','くも')}ができにくく、${R('晴','は')}れます。`;
-    case 3:return `${TEI}では、まわりの${KUUKI}が${R('反時計回','はんとけいまわ')}りにふきこみます。`;
-    case 4:return `${R('集','あつ')}まった${KUUKI}は${R('上','うえ')}へ${R('上','あ')}がり、${R('冷','ひ')}えて${R('雲','くも')}になり、${R('雨','あめ')}がふります。`;
-    default:return `${R('風','かぜ')}は、${KOU}から${TEI}へ${R('向','む')}かってふきます。`;
-  }
-}
+const KOU=R('高気圧','こうきあつ'),TEI=R('低気圧','ていきあつ'),KUUKI=R('空気','くうき'),KIATSU=R('気圧','きあつ');
+const CAPTIONS={
+  H:[`まわりより${KIATSU}が${R('高','たか')}いところが「${KOU}」です。`,
+     `${KOU}では、${R('上','うえ')}から${KUUKI}がおりてきます。`,
+     `${KUUKI}は${R('時計回','とけいまわ')}りにふき${R('出','だ')}します。${R('雲','くも')}ができにくく、${R('晴','は')}れます。`],
+  L:[`まわりより${KIATSU}が${R('低','ひく')}いところが「${TEI}」です。`,
+     `${TEI}では、まわりの${KUUKI}が${R('反時計回','はんとけいまわ')}りにふきこみます。`,
+     `ふきこんだ${KUUKI}は、${R('上','うえ')}へ${R('上','あ')}がっていきます。`,
+     `${R('上','あ')}がった${KUUKI}は${R('冷','ひ')}えて${R('雲','くも')}になり、${R('雨','あめ')}がふります。`],
+  B:[`${KUUKI}が${R('地面','じめん')}をおす${R('力','ちから')}を「${KIATSU}」といいます。`,
+     `${KOU}では${KUUKI}がおり、${TEI}ではふきこみます。`,
+     `${KOU}は${R('晴','は')}れ、${TEI}は${R('雲','くも')}ができて${R('雨','あめ')}がふります。`,
+     `${R('風','かぜ')}は、${KOU}から${TEI}へ${R('向','む')}かってふきます。`],
+};
 const cache={};
 function setHTML(id,html){if(cache[id]!==html){cache[id]=html;$(id).innerHTML=html;}}
 function syncUI(){
-  setHTML('caption',captionHTML());
-  const hOn=S.aOut>0.6,lOn=S.rain>0.3;
+  setHTML('caption',CAPTIONS[S.scene][S.stage]);
+  const hOn=S.sun>0.6,lOn=S.rain>0.3;
   setHTML('hWx',hOn?`☀ ${R('晴','は')}れ`:'？');setHTML('lWx',lOn?`🌧 くもり・${R('雨','あめ')}`:'？');
   $('hWx').classList.toggle('q',!hOn);$('lWx').classList.toggle('q',!lOn);
   setHTML('playBtn',S.mode==='play'?`⏸ ${R('止','と')}める`:`▶ ${R('自動','じどう')}`);
@@ -337,34 +360,38 @@ let prevStage=0;
 function update(dt){
   if(S.paused)return;
   S.elapsed+=dt;S.frames++;
-  if(S.mode==='play'){S.p+=dt/CFG.duration;if(S.p>=1){S.p=1;S.mode='idle';}}
-  else if(S.mode==='step'){S.p+=dt/CFG.duration*CFG.stepSpeed;if(S.p>=S.targetP){S.p=S.targetP;S.mode='idle';}}
+  const total=SCENES[S.scene].N*CFG.stepSeconds;
+  if(S.mode==='play'){S.p+=dt/total;if(S.p>=1){S.p=1;S.mode='idle';}}
+  else if(S.mode==='step'){S.p+=dt/total*CFG.stepSpeed;if(S.p>=S.targetP){S.p=S.targetP;S.mode='idle';}}
   derive();
+  const k=1-Math.exp(-dt*9);S.actH+=((S.scene!=='L'?1:0)-S.actH)*k;S.actL+=((S.scene!=='H'?1:0)-S.actL)*k;
   if(S.stage!==prevStage){if(S.stage>prevStage)sStage();prevStage=S.stage;}
   updateVisuals(dt);
 }
-const _a={x:0,z:0},_b={x:0,z:0};
+const _X=new THREE.Vector3(1,0,0),_T=new THREE.Vector3();
 function updateVisuals(dt){
   const t=S.elapsed;
-  // 地上の風のうず
-  for(const s of spirals){const al=s.sys==='H'?S.aOut:S.aLow,u=(t*CFG.spiralSpeed+s.ph)%1;
-    spiralPos(s.sys,s.arm,u,_a);spiralPos(s.sys,s.arm,Math.min(1,u+0.02),_b);
-    s.mesh.position.set(_a.x,0.3,_a.z);s.mesh.rotation.y=Math.atan2(-(_b.z-_a.z),_b.x-_a.x);
-    s.mesh.material.opacity=0.95*al*Math.min(1,Math.sin(Math.PI*u)*2.5);s.mesh.visible=al>0.01;}
-  trailMats.H.opacity=0.45*S.aOut;trailMats.L.opacity=0.45*S.aLow;
-  // 上下の空気の動き（高気圧：おりる／低気圧：上がる）
-  for(const c of columns){const al=c.down?S.aHigh:S.aUp,u=(t*CFG.columnSpeed+c.ph)%1;
-    c.g.position.set(c.x,c.down?lerp(24,5,u):lerp(4,15.5,u),c.z);
-    c.g.userData.mat.opacity=0.92*al*Math.min(1,Math.sin(Math.PI*u)*2.5);c.g.visible=al>0.01;}
+  // 空気の流れ：道すじ（管）を rev の分だけのばし、矢印は道すじにそって流れる
+  for(const q of paths){
+    const rev=q.sys==='H'?S.revH:S.revL;
+    q.tube.geometry.setDrawRange(0,Math.round(clamp(rev,0,1)*TUBE_SEG)*TUBE_RAD*6);
+    for(const a of q.arrows){
+      const s=(t*CFG.flowSpeed+a.off)%q.len,mask=clamp(s/2.5,0,1)*clamp((rev*q.len-s)/2.5,0,1),m=a.mesh;
+      m.visible=mask>0.01;if(!m.visible)continue;
+      const u=s/q.len;q.curve.getPointAt(u,m.position);q.curve.getTangentAt(u,_T);m.quaternion.setFromUnitVectors(_X,_T);
+      m.material.opacity=0.95*mask;}
+  }
   // 高気圧 → 低気圧 の風
   for(const w of winds){const u=(t*0.1+w.ph)%1;
-    w.mesh.position.set(lerp(-9,9,u),0.5,w.z+lerp(-2,2,u));w.mesh.rotation.y=Math.atan2(-4,18);
-    w.mesh.material.opacity=0.97*S.aWind*Math.min(1,Math.sin(Math.PI*u)*2.5);w.mesh.visible=S.aWind>0.01;}
+    w.mesh.position.set(lerp(CFG.highX+10,CFG.lowX-10,u),1.6,w.z);
+    w.mesh.material.opacity=0.97*S.wind*Math.min(1,Math.sin(Math.PI*u)*2.5);w.mesh.visible=S.wind>0.01;}
   // 印と文字
-  if(markH){markH.material.opacity=S.aHigh;markL.material.opacity=S.aLow;}
-  if(L.high){L.high.material.opacity=S.aHigh;L.low.material.opacity=S.aLow;L.down.material.opacity=S.aHigh;L.up.material.opacity=S.aUp;L.wind.material.opacity=S.aWind;}
+  if(markH){markH.material.opacity=S.actH;markL.material.opacity=S.actL;}
+  if(L.high){
+    L.high.material.opacity=0.3+0.7*S.actH;L.low.material.opacity=0.3+0.7*S.actL;   // 今の場面に出てこない方はうすく
+    L.down.material.opacity=smooth(0,0.3,S.revH);L.up.material.opacity=smooth(FG,FG+0.15,S.revL);L.wind.material.opacity=S.wind;}
   // 太陽・雲・雨
-  sun.material.opacity=S.aOut;const ss=11+0.5*Math.sin(t*1.5);sun.scale.set(ss,ss,1);
+  sun.material.opacity=S.sun;const ss=11+0.5*Math.sin(t*1.5);sun.scale.set(ss,ss,1);
   const cl=S.cloud;cloud.visible=cl>0.01;
   if(cloud.visible){shapeBlob(t);const k=lerp(0.3,1,cl);cloud.scale.set(7.6*k,4.2*k,5.6*k);
     blobMat.opacity=0.93*Math.min(1,cl*1.6);blobMat.color.copy(cCloud).lerp(cRain,S.rain);blobMat.emissive.copy(cCloudEm).lerp(cRainEm,S.rain);}
@@ -379,11 +406,17 @@ function updateVisuals(dt){
 function setP(p){S.p=clamp(p,0,1);S.mode='idle';derive();prevStage=S.stage;}
 function play(){if(S.p>=0.999)S.p=0;S.mode='play';}
 function pause(){S.mode='idle';}
-function next(){const t=CFG.steps.find(v=>v>S.p+0.004);if(t===undefined)return;S.targetP=t;S.mode='step';}
+function next(){const N=SCENES[S.scene].N;let t;for(let k=1;k<=N;k++){if(k/N>S.p+0.004){t=k/N;break;}}if(t===undefined)return;S.targetP=t;S.mode='step';}
 function reset(){setP(0);}
+function setScene(sc){
+  S.scene=sc;setP(0);
+  $('selH').classList.toggle('sel',sc==='H');$('selL').classList.toggle('sel',sc==='L');$('selB').classList.toggle('sel',sc==='B');
+  updateVisuals(0);syncUI();
+}
 function showHelp(v){S.paused=v;$('help').classList.toggle('hide',!v);if(rainGain&&AC&&v)rainGain.gain.setTargetAtTime(0,AC.currentTime,0.05);}
 
 function bind(id,fn){$(id).addEventListener('click',e=>{initAudio();sClick();fn(e);});}
+bind('selH',()=>setScene('H'));bind('selL',()=>setScene('L'));bind('selB',()=>setScene('B'));
 bind('resetBtn',reset);
 bind('playBtn',()=>S.mode==='play'?pause():play());
 bind('nextBtn',next);
@@ -405,7 +438,8 @@ bind('startBtn',()=>{S.started=true;showHelp(false);});
 
 /* ===================== 起動 ===================== */
 $('ver').textContent=CFG.version;
-derive();syncUI();fitView();updateVisuals(0);
+S.actH=CFG.startScene!=='L'?1:0;S.actL=CFG.startScene!=='H'?1:0;
+setScene(CFG.startScene);fitView();
 new ResizeObserver(()=>fitView()).observe(stageEl);
 window.addEventListener('resize',fitView);
 // フォントを待ってから3D内の文字を作る（読めなくても2.5秒で先へ進む）
@@ -422,16 +456,17 @@ function loop(now){
 requestAnimationFrame(loop);
 
 /* ===================== テスト用フック =====================
-   矢印・雲などは .position を直接動かさず、S.p（進みぐあい 0〜1）と S.elapsed（経過時間）から
-   derive() と updateVisuals() が毎フレーム計算して置いている。 */
+   矢印は .position を直接動かさず、道すじ（paths[i].curve）の上の位置を S.elapsed と S.p から
+   毎フレーム計算して置いている（arrows[i].mesh が実体）。 */
 window.__game={
-  state:S,CFG,camera,scene,spirals,columns,winds,cloud,
+  state:S,CFG,camera,scene,paths,winds,cloud,
   api:{
     tick(n=1,dt=1/60){for(let i=0;i<n;i++)update(dt);syncUI();renderer.render(scene,camera);return this.info();},
     start(){S.started=true;showHelp(false);},
     setP(p){setP(p);updateVisuals(0);},
-    play,pause,next,reset,showHelp,
-    info(){return {p:S.p,mode:S.mode,stage:S.stage,aHigh:S.aHigh,aOut:S.aOut,aLow:S.aLow,aUp:S.aUp,cloud:S.cloud,rain:S.rain,aWind:S.aWind,frames:S.frames,elapsed:S.elapsed,paused:S.paused};}
+    setScene,play,pause,next,reset,showHelp,
+    info(){return {scene:S.scene,p:S.p,mode:S.mode,stage:S.stage,revH:S.revH,revL:S.revL,sun:S.sun,cloud:S.cloud,rain:S.rain,wind:S.wind,FV,FG,
+      visibleArrows:paths.reduce((n,q)=>n+q.arrows.filter(a=>a.mesh.visible).length,0),frames:S.frames,elapsed:S.elapsed,paused:S.paused};}
   }
 };
 </script>
