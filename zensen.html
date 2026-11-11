@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>前線</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+  }
+}
+</script>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;}
+  body{--pw:200px;font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",sans-serif;background:#e4f4ff;color:#1c2b3a;
+    touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+    display:flex;flex-direction:column;}
+  rt{font-size:.5em;font-weight:400;}
+  button{font-family:inherit;color:inherit;}
+  #stage{flex:1;min-height:0;position:relative;overflow:hidden;}
+  #stage canvas#gl{display:block;width:100%;height:100%;touch-action:none;}
+  #caption{position:absolute;left:12px;top:10px;width:fit-content;max-width:calc(100% - 90px);background:rgba(255,255,255,.93);border:3px solid #1c2b3a;
+    border-radius:16px;padding:6px 16px 8px;font-weight:700;font-size:clamp(16px,2.25vw,27px);line-height:1.8;pointer-events:none;}
+  #helpBtn{position:absolute;right:12px;top:10px;width:54px;height:54px;border-radius:50%;border:3px solid #1c2b3a;background:#ffd84d;
+    font-size:26px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0;}
+  #ver{position:absolute;left:12px;bottom:6px;font-size:11px;color:#1c2b3a;opacity:.6;pointer-events:none;}
+
+  /* 右のカード：見たい場面をえらぶボタン（背景は空のつづき） */
+  #panel{position:absolute;right:16px;top:78px;width:calc(var(--pw) - 8px);display:flex;flex-direction:column;gap:12px;pointer-events:none;}
+  .card{pointer-events:auto;display:block;width:100%;cursor:pointer;border:3px solid #1c2b3a;border-radius:12px;background:rgba(255,255,255,.93);
+    text-align:center;font-weight:700;line-height:1.8;padding:2px 6px 4px;}
+  .card:active{transform:translateY(2px);}
+  .card.sel{box-shadow:0 0 0 5px #ffd84d;}
+  .card .nm{font-size:19px;color:#fff;border-radius:8px;margin:4px 0 2px;}
+  .card.k .nm{background:#2f5fd0;} .card.w .nm{background:#d9453a;}
+  .card .wx{font-size:18px;min-height:1.8em;white-space:nowrap;}
+  .card .wx.q{opacity:.35;}
+  .card.b{background:#bfe6ff;font-size:19px;min-height:56px;padding:4px 8px;}
+
+  #bar{background:#f2faff;border-top:3px solid #1c2b3a;padding:8px 10px;display:flex;gap:8px;align-items:center;}
+  #bar button{min-height:56px;min-width:56px;border-radius:14px;border:3px solid #1c2b3a;background:#bfe6ff;font-size:19px;font-weight:700;padding:0 14px;line-height:1.6;white-space:nowrap;}
+  #bar button:active{transform:translateY(2px);filter:brightness(.95);}
+  #scrubWrap{flex:1;min-width:80px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;white-space:nowrap;}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;background:transparent;margin:0;touch-action:none;}
+  input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:6px;background:#fff;border:2px solid #1c2b3a;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:36px;height:36px;border-radius:50%;background:#bfe6ff;border:3px solid #1c2b3a;margin-top:-14px;}
+  input[type=range]::-moz-range-track{height:12px;border-radius:6px;background:#fff;border:2px solid #1c2b3a;}
+  input[type=range]::-moz-range-thumb{width:32px;height:32px;border-radius:50%;background:#bfe6ff;border:3px solid #1c2b3a;}
+
+  #help{position:fixed;inset:0;background:rgba(20,35,55,.72);display:flex;align-items:center;justify-content:center;z-index:10;padding:12px;}
+  #help.hide{display:none;}
+  #helpCard{background:#fff;border:4px solid #1c2b3a;border-radius:22px;max-width:760px;width:100%;max-height:100%;overflow:auto;padding:14px 22px 18px;}
+  #helpCard h1{margin:0 0 4px;font-size:clamp(24px,4vw,36px);text-align:center;line-height:1.8;}
+  #helpCard p{margin:2px 0;font-size:clamp(15px,2vw,19px);line-height:2;}
+  .how{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:center;margin:6px 0 12px;font-size:clamp(15px,2vw,19px);line-height:1.9;}
+  .how .ic{min-width:92px;height:44px;border:3px solid #1c2b3a;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;padding:0 8px;background:#bfe6ff;white-space:nowrap;}
+  #startBtn{display:block;margin:0 auto;min-width:240px;min-height:64px;border-radius:32px;border:4px solid #1c2b3a;background:#4cc36a;color:#fff;font-size:26px;font-weight:700;line-height:1.6;}
+
+  @media (max-width:760px){ body{--pw:160px;} .card .nm{font-size:16px;} .card .wx{font-size:14px;} .card.b{font-size:16px;} }
+</style>
+</head>
+<body>
+<!-- build: 2026-11-11a zensen -->
+<div id="stage">
+  <div id="caption"></div>
+  <button id="helpBtn" aria-label="せつめい">？</button>
+  <div id="panel">
+    <button class="card k" id="selK"><div class="nm">▶ <ruby>寒冷前線<rt>かんれいぜんせん</rt></ruby></div><div class="wx q" id="kWx1">？</div><div class="wx q" id="kWx2">？</div></button>
+    <button class="card w" id="selW"><div class="nm">▶ <ruby>温暖前線<rt>おんだんぜんせん</rt></ruby></div><div class="wx q" id="wWx1">？</div><div class="wx q" id="wWx2">？</div></button>
+    <button class="card b" id="selC">くらべる</button>
+  </div>
+  <div id="ver"></div>
+</div>
+<div id="bar">
+  <button id="resetBtn">⏮ <ruby>最初<rt>さいしょ</rt></ruby></button>
+  <button id="playBtn">▶ <ruby>自動<rt>じどう</rt></ruby></button>
+  <button id="nextBtn"><ruby>次<rt>つぎ</rt></ruby>へ ⏭</button>
+  <div id="scrubWrap"><span><ruby>動<rt>うご</rt></ruby>かす</span><input type="range" id="scrub" min="0" max="1000" value="0"></div>
+  <button id="muteBtn" aria-label="音">🔊</button>
+  <button id="viewBtn"><ruby>視点<rt>してん</rt></ruby>もどす</button>
+</div>
+
+<div id="help">
+  <div id="helpCard">
+    <h1>🌧 <ruby>前線<rt>ぜんせん</rt></ruby></h1>
+    <p>つめたい<ruby>空気<rt>くうき</rt></ruby>とあたたかい<ruby>空気<rt>くうき</rt></ruby>がぶつかるところ（<ruby>前線<rt>ぜんせん</rt></ruby>）で、<ruby>雲<rt>くも</rt></ruby>や<ruby>雨<rt>あめ</rt></ruby>がどうなるかを<ruby>見<rt>み</rt></ruby>ます。</p>
+    <div class="how">
+      <div class="ic">▶ <ruby>寒冷前線<rt>かんれいぜんせん</rt></ruby></div><div><ruby>右<rt>みぎ</rt></ruby>のカードをおすと、<ruby>寒冷前線<rt>かんれいぜんせん</rt></ruby>・<ruby>温暖前線<rt>おんだんぜんせん</rt></ruby>を<ruby>最初<rt>さいしょ</rt></ruby>から<ruby>見<rt>み</rt></ruby>られます。「くらべる」で2つをならべて<ruby>見<rt>み</rt></ruby>ます</div>
+      <div class="ic">⏭ <ruby>次<rt>つぎ</rt></ruby>へ</div><div>1だんかいずつ<ruby>進<rt>すす</rt></ruby>めて<ruby>止<rt>と</rt></ruby>まります</div>
+      <div class="ic">▶ <ruby>自動<rt>じどう</rt></ruby></div><div><ruby>最後<rt>さいご</rt></ruby>まで<ruby>自動<rt>じどう</rt></ruby>で<ruby>進<rt>すす</rt></ruby>みます（もう<ruby>一度<rt>いちど</rt></ruby>おすと<ruby>止<rt>と</rt></ruby>まる）</div>
+      <div class="ic">●━━━</div><div>スライダーで<ruby>好<rt>す</rt></ruby>きな<ruby>場面<rt>ばめん</rt></ruby>に<ruby>動<rt>うご</rt></ruby>かせます</div>
+      <div class="ic">👆</div><div><ruby>画面<rt>がめん</rt></ruby>を<ruby>指<rt>ゆび</rt></ruby>でなぞると<ruby>見<rt>み</rt></ruby>る<ruby>向<rt>む</rt></ruby>きが<ruby>変<rt>か</rt></ruby>わります。「<ruby>視点<rt>してん</rt></ruby>もどす」でもどります</div>
+    </div>
+    <button id="startBtn">はじめる</button>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+
+/* ===================== 設定（ここの数値だけ直せば調整できます） ===================== */
+const CFG = {
+  version: 'v2026-11-11a',
+  startScene: 'K',             // 最初に見る場面：'K'（寒冷前線）/ 'W'（温暖前線）/ 'C'（くらべる）
+  stepSeconds: 10,             // 1だんかい（「次へ」1回ぶん）にかける秒数
+  stepSpeed: 1.5,              // 「次へ」で進むときの速さ（自動の何倍か）
+  // 前線の位置（左右）。前線は左（西）から右（東）へ進む
+  kStart: -16, kMeet: -2, kEnd: 20,     // 寒冷前線：最初 → もぐりこんだあと → 通りすぎたあと
+  wStart: -26, wMeet: -14, wEnd: 16,    // 温暖前線：最初 → はい上がったあと → 通りすぎたあと
+  cK: -16, cW: 6,                       // 「くらべる」での寒冷前線・温暖前線の位置
+  townX: 6, townZ: 11,         // 町（家）の位置。前線がここを通りすぎる
+  // つめたい空気の形
+  kH: 9, kNose: 2.5, kBack: 0.1,   // 寒冷前線：高さ・先の丸み（小さいほど急）・後ろの上がりぐあい
+  wH: 14, wLen: 26,                // 温暖前線：高さ・坂の長さ（大きいほどゆるやか）
+  airMid: 13, airTop: 27,      // あたたかい空気の色：airMid まではっきりぬり、airTop へ向けてうすくする
+  coldAlpha: 0.42, warmAlpha: 0.4,
+  flowSpeed: 5.5,              // 矢印が流れる速さ
+  viewTilt: 33,                // 見下ろす角度（度）
+  panelReserve: 0.5,            // 右のカードの分だけ3Dを左へよせる割合（0でよせない、1でカードの幅ぶん）
+  colCold: 0x2f5fd0,           // つめたい空気・寒冷前線の色（天気図と同じ青）
+  colWarm: 0xd9453a,           // あたたかい空気の矢印・温暖前線の色（天気図と同じ赤）
+  colWarmAir: 0xff7a3d,        // あたたかい空気のかたまりの色
+  colColdArrow: 0x1b3c9e,
+  rainK: 260, rainW: 200,      // 雨つぶの数（寒冷前線：強い雨／温暖前線：弱い雨）
+  sound: true,
+};
+const LAND = { x0:-44, x1:44, z0:-17, z1:17 };
+const SCENES = { K:{N:4}, W:{N:4}, C:{N:2} };   // 場面ごとの「次へ」の回数
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const smooth=(a,b,v)=>{const t=clamp((v-a)/(b-a),0,1);return t*t*(3-2*t);};
+function seeded(s){return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+
+/* ===================== 状態 =====================
+   すべての見た目は S.scene（場面）と S.p（進みぐあい 0〜1）から derive() が計算する。
+   場面 K：寒冷前線 ／ W：温暖前線 ／ C：くらべる。 「次へ」の k回目 ＝ p が k/N。 */
+const S = {
+  scene: CFG.startScene, p: 0, mode: 'idle', targetP: 0, stage: 0,
+  fK: null, fW: null,                    // 寒冷前線・温暖前線の位置（x）。その場面に無いときは null
+  symK: 0, symW: 0,                      // 前線の記号と名前の見えぐあい
+  revKc: 0, revKw: 0, revW: 0,           // 矢印の道すじをどこまで見せるか（寒冷:つめたい空気／寒冷:あたたかい空気／温暖:あたたかい空気）
+  cloudK: 0, rainK: 0, cloudW: 0, rainW: 0, pass: 0,
+  townCold: 0,                           // 町がつめたい空気の中にあるか（0〜1）
+  paused: true, started: false, mute: false, frames: 0, elapsed: 0,
+};
+let FVW=0.3;   // 温暖前線の道すじで「地面を進む部分」の割合（道すじを作ったあとに計算）
+const hK=d=>d>0?CFG.kH*(1-Math.exp(-d/CFG.kNose))+CFG.kBack*d:0;   // 寒冷前線の後ろ d のところの、つめたい空気の高さ
+const hW=d=>d>0?CFG.wH*(1-Math.exp(-d/CFG.wLen)):0;                // 温暖前線の前 d のところの、つめたい空気の高さ
+function hcAt(x){let h=0;if(S.fK!==null)h=Math.max(h,hK(S.fK-x));if(S.fW!==null)h=Math.max(h,hW(x-S.fW));return h;}
+function derive(){
+  const N=SCENES[S.scene].N, p=S.p, r=k=>smooth((k-1)/N,(k-1+0.6)/N,p), mv=k=>smooth((k-1)/N,(k-0.08)/N,p);
+  let st=0;for(let k=1;k<=N;k++)if(p>=(k-1+0.3)/N)st=k;
+  S.stage=st;
+  S.fK=S.fW=null;S.symK=S.symW=S.revKc=S.revKw=S.revW=S.cloudK=S.rainK=S.cloudW=S.rainW=S.pass=0;
+  if(S.scene==='K'){
+    S.fK=CFG.kStart+(CFG.kMeet-CFG.kStart)*mv(1)+(CFG.kEnd-CFG.kMeet)*mv(4);
+    S.symK=r(1);S.revKc=r(1);S.revKw=r(2);const c=r(3);S.cloudK=smooth(0,0.7,c);S.rainK=smooth(0.55,1,c);S.pass=mv(4);
+  }else if(S.scene==='W'){
+    S.fW=CFG.wStart+(CFG.wMeet-CFG.wStart)*mv(1)+(CFG.wEnd-CFG.wMeet)*mv(4);
+    S.symW=r(1);S.revW=FVW*r(1)+(1-FVW)*r(2);const c=r(3);S.cloudW=smooth(0,0.7,c);S.rainW=smooth(0.55,1,c);S.pass=mv(4);
+  }else{
+    S.fK=CFG.cK;S.fW=CFG.cW;S.symK=S.symW=S.revKc=S.revKw=S.revW=1;
+    S.cloudK=S.cloudW=smooth(0,0.8,r(1));S.rainK=S.rainW=r(2);
+  }
+  S.townCold=smooth(0.3,2.5,hcAt(CFG.townX));
+}
+
+/* ===================== Three.js 準備 ===================== */
+const $=id=>document.getElementById(id);
+const stageEl=$('stage'), capEl=$('caption');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.localClippingEnabled=true;
+renderer.domElement.id='gl';
+stageEl.prepend(renderer.domElement);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(35,1,1,700);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enablePan=false; controls.enableDamping=true; controls.dampingFactor=0.12;
+controls.minPolarAngle=THREE.MathUtils.degToRad(25); controls.maxPolarAngle=THREE.MathUtils.degToRad(85);
+controls.minAzimuthAngle=-0.7; controls.maxAzimuthAngle=0.7;
+/* 景色（地面〜雲）が、説明文の下・カードの左にできるだけ大きく入るようにカメラを置く */
+const VIEW={w:106,yTop:29,zTop:-8,yBot:-3.6,zBot:17,botPad:22};
+function fitView(){
+  const w=stageEl.clientWidth||800,h=stageEl.clientHeight||600;
+  renderer.setSize(w,h,false); camera.aspect=w/h;
+  const res=($('panel').offsetWidth+16)*CFG.panelReserve;                 // 右のカードの分
+  camera.setViewOffset(w,h,res/2,0,w,h);                                   // 景色を左へよせる
+  const a=THREE.MathUtils.degToRad(CFG.viewTilt),ca=Math.cos(a),sa=Math.sin(a);
+  const vMax=VIEW.yTop*ca-VIEW.zTop*sa, vMin=VIEW.yBot*ca-VIEW.zBot*sa, span=vMax-vMin;   // 画面の上下方向に投影した高さ
+  const fs=parseFloat(getComputedStyle(capEl).fontSize)||24;
+  const capH=(w<900?2:1)*1.8*fs+20+10+8;
+  const avail=h-capH-VIEW.botPad;
+  const ppu=Math.min((w-16-res)/VIEW.w,avail/span);
+  const extra=Math.max(0,avail-span*ppu);
+  const t=Math.tan(THREE.MathUtils.degToRad(camera.fov/2)), d=h/(2*t*ppu);
+  const vT=vMin+h/(2*ppu)-(VIEW.botPad+extra/2)/ppu, ty=vT/ca;
+  camera.position.set(0,ty+d*sa,d*ca);
+  controls.target.set(0,ty,0);
+  controls.minDistance=d*0.5; controls.maxDistance=d*1.15; controls.update();
+}
+
+// 空
+{const c=document.createElement('canvas');c.width=8;c.height=256;const g=c.getContext('2d');const gr=g.createLinearGradient(0,0,0,256);
+ gr.addColorStop(0,'#4aa0ea');gr.addColorStop(.6,'#aedbff');gr.addColorStop(1,'#e4f4ff');g.fillStyle=gr;g.fillRect(0,0,8,256);
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;scene.background=t;}
+scene.add(new THREE.HemisphereLight(0xffffff,0x8fae8f,1.25));
+const sunL=new THREE.DirectionalLight(0xffffff,1.7);sunL.position.set(-30,50,40);scene.add(sunL);
+
+// 地面（1まい）
+const M4=new THREE.Matrix4(),Q0=new THREE.Quaternion(),V3=new THREE.Vector3(),SC=new THREE.Vector3();
+{
+  const W=LAND.x1-LAND.x0,D=LAND.z1-LAND.z0;
+  const g=new THREE.PlaneGeometry(W,D,44,17);g.rotateX(-Math.PI/2);
+  const n=g.attributes.position.count,col=new Float32Array(n*3),r=seeded(5),c1=new THREE.Color(0x8fd273),c2=new THREE.Color(0x7cc463),ct=new THREE.Color();
+  for(let i=0;i<n;i++){ct.copy(c1).lerp(c2,r());col[i*3]=ct.r;col[i*3+1]=ct.g;col[i*3+2]=ct.b;}
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));
+  scene.add(new THREE.Mesh(g.toNonIndexed(),new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true})));
+  const base=new THREE.Mesh(new THREE.BoxGeometry(W,3.5,D),new THREE.MeshLambertMaterial({color:0xa27b4e}));base.position.set(0,-1.78,0);scene.add(base);
+  const NT=40,trees=new THREE.InstancedMesh(new THREE.ConeGeometry(0.6,1.7,6),new THREE.MeshLambertMaterial({color:0x2f7d46,flatShading:true}),NT),rr=seeded(8);
+  let c=0,guard=0;
+  while(c<NT&&guard++<4000){const x=LAND.x0+1.5+rr()*(W-3),z=LAND.z0+1+rr()*(D*0.62);if(Math.hypot(x-CFG.townX,z-CFG.townZ)<5)continue;   // 木はおくの方に置く（手前は矢印や町を見やすく）
+    const s=0.7+rr()*0.7;M4.compose(V3.set(x,0.85*s,z),Q0,SC.set(s,s,s));trees.setMatrixAt(c++,M4);}
+  trees.count=c;scene.add(trees);
+}
+// 町（家）：前線が通りすぎる場所
+const town=new THREE.Group();
+{
+  const mk=(x,z,s,wall,roof)=>{
+    const b=new THREE.Mesh(new THREE.BoxGeometry(2.4*s,1.7*s,2.2*s),new THREE.MeshLambertMaterial({color:wall}));b.position.set(x,0.85*s,z);town.add(b);
+    const r=new THREE.Mesh(new THREE.ConeGeometry(2.0*s,1.3*s,4),new THREE.MeshLambertMaterial({color:roof,flatShading:true}));r.rotation.y=Math.PI/4;r.position.set(x,(1.7+0.65)*s,z);town.add(r);};
+  mk(0,0,1,0xfff3d6,0xb5533c);mk(-3,1.2,0.8,0xf4f0ea,0x4f6f9f);mk(2.8,-1.6,0.85,0xffe9c9,0x7a5a3a);
+  town.position.set(CFG.townX,0,CFG.townZ);scene.add(town);
+}
+
+// 文字ラベル（ふりがな付き）
+function makeLabel(segs,o={}){
+  const fs=56,rf=26,pad=18,font=`700 ${fs}px "BIZ UDPGothic","Hiragino Sans",sans-serif`,rfont=`400 ${rf}px "BIZ UDPGothic","Hiragino Sans",sans-serif`;
+  const c=document.createElement('canvas'),g=c.getContext('2d');g.font=font;
+  const ws=segs.map(s=>g.measureText(s[0]).width),W=ws.reduce((a,b)=>a+b,0)+pad*2,hasR=segs.some(s=>s[1]),H=fs+(hasR?rf+6:0)+pad*1.4;
+  c.width=Math.ceil(W);c.height=Math.ceil(H);
+  g.fillStyle=o.bg||'rgba(255,255,255,.92)';g.strokeStyle=o.border||'#1c2b3a';g.lineWidth=5;
+  g.beginPath();g.roundRect(3,3,c.width-6,c.height-6,18);g.fill();g.stroke();
+  let x=pad;g.textBaseline='alphabetic';g.fillStyle=o.color||'#1c2b3a';
+  segs.forEach((s,i)=>{g.font=font;g.textAlign='left';g.fillText(s[0],x,c.height-pad*0.9);if(s[1]){g.font=rfont;g.textAlign='center';g.fillText(s[1],x+ws[i]/2,pad*0.5+rf);}x+=ws[i];});
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthTest:false,opacity:0}));
+  const hh=o.h||3.2;sp.scale.set(hh*c.width/c.height,hh,1);sp.renderOrder=20;sp.visible=false;scene.add(sp);return sp;
+}
+const css=n=>'#'+n.toString(16).padStart(6,'0');
+const L={};   // 3Dの中の文字。フォントの読みこみ後に作る
+function buildLabels(){
+  const cold=()=>makeLabel([['つめたい',''],['空気','くうき']],{color:css(CFG.colCold)});
+  L.cold=cold();L.cold2=cold();
+  L.warm=makeLabel([['あたたかい',''],['空気','くうき']],{color:css(CFG.colWarm)});
+  L.frontK=makeLabel([['寒冷前線','かんれいぜんせん']],{color:'#fff',bg:css(CFG.colCold)});
+  L.frontW=makeLabel([['温暖前線','おんだんぜんせん']],{color:'#fff',bg:css(CFG.colWarm)});
+  L.cloudK=makeLabel([['積乱雲','せきらんうん']],{h:2.9});
+  L.cloudW=makeLabel([['乱層雲','らんそううん']],{h:2.9});
+  L.tWarm=makeLabel([['あたたかい','']],{color:'#fff',bg:'#e8743a',h:2.5});
+  L.tCold=makeLabel([['さむい','']],{color:'#fff',bg:'#3a7be0',h:2.5});
+}
+function put(sp,x,y,z,op){if(!sp)return;sp.material.opacity=op;sp.visible=op>0.01;if(sp.visible)sp.position.set(x,y,z);}
+
+/* ===== 空気のかたまり：つめたい空気（青）とあたたかい空気（赤）を、横から切った形で見せる =====
+   地面を左右に細かく区切り、それぞれの場所の「つめたい空気の高さ」hcAt(x) から毎フレーム形を作り直す。
+   つめたい空気の上の面が「前線面」、それが地面とまじわる線が「前線」。 */
+const AIR_N=220, AV=16;
+const air=(()=>{
+  const n=AIR_N+1,pos=new Float32Array(n*AV*3),col=new Float32Array(n*AV*4),idx=[];
+  const cc=new THREE.Color(CFG.colCold),cw=new THREE.Color(CFG.colWarmAir),ct=new THREE.Color(0x7fa6f5),ce=new THREE.Color(0x1d3a94);
+  const wa=CFG.warmAlpha,A=[CFG.coldAlpha,CFG.coldAlpha,CFG.coldAlpha*0.5,CFG.coldAlpha*0.5,wa,wa,wa*0.5,wa*0.5,0.45,0.45,0.9,0.9,wa,0,wa*0.5,0];
+  const C=[cc,cc,cc,cc,cw,cw,cw,cw,ct,ct,ce,ce,cw,cw,cw,cw];
+  for(let i=0;i<n;i++)for(let v=0;v<AV;v++){const o=(i*AV+v)*4;col[o]=C[v].r;col[o+1]=C[v].g;col[o+2]=C[v].b;col[o+3]=A[v];}
+  for(let i=0;i<AIR_N;i++){const a=i*AV,b=a+AV;for(let q=0;q<AV;q+=2)idx.push(a+q,b+q,b+q+1,a+q,b+q+1,a+q+1);}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('color',new THREE.BufferAttribute(col,4).setUsage(THREE.DynamicDrawUsage));
+  g.setIndex(idx);
+  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
+  m.renderOrder=1;m.frustumCulled=false;scene.add(m);
+  return {mesh:m,pos,col,h:new Float32Array(n),alpha:A};
+})();
+function updateAir(){
+  const n=AIR_N+1,{pos,col,h}=air,dx=(LAND.x1-LAND.x0)/AIR_N,z1=LAND.z1,z0=LAND.z0,top=CFG.airTop,mid=CFG.airMid;
+  for(let i=0;i<n;i++)h[i]=hcAt(LAND.x0+i*dx);
+  for(let i=0;i<n;i++){
+    const x=LAND.x0+i*dx,y=h[i],o=i*AV*3,has=y>0.001||(i>0&&h[i-1]>0.001)||(i<n-1&&h[i+1]>0.001);
+    const sl=(h[Math.min(n-1,i+1)]-h[Math.max(0,i-1)])/(2*dx),il=0.3/Math.hypot(sl,1);   // 前線面の線は、面に垂直な向きに太さをつける
+    const P=(v,px,py,pz)=>{pos[o+v*3]=px;pos[o+v*3+1]=py;pos[o+v*3+2]=pz;};
+    P(0,x,0.03,z1);P(1,x,y,z1);P(2,x,0.03,z0);P(3,x,y,z0);
+    const ym=Math.max(mid,y),yt=Math.max(top,y);P(4,x,y,z1);P(5,x,ym,z1);P(6,x,y,z0);P(7,x,ym,z0);P(12,x,ym,z1);P(13,x,yt,z1);P(14,x,ym,z0);P(15,x,yt,z0);
+    P(8,x,y+0.02,z1);P(9,x,y+0.02,z0);
+    P(10,x,y,z1+0.03);P(11,x-sl*il,y+il,z1+0.03);
+    const c=i*AV*4;col[c+8*4+3]=col[c+9*4+3]=has&&y>0.001?air.alpha[8]:0;col[c+10*4+3]=col[c+11*4+3]=y>0.001?air.alpha[10]:0;
+  }
+  air.mesh.geometry.attributes.position.needsUpdate=true;air.mesh.geometry.attributes.color.needsUpdate=true;
+}
+
+/* ===== 前線の記号（天気図と同じ）：地面の上に、進む向き（右）へ向けてかく ===== */
+function frontSymbol(kind,color){
+  const g=new THREE.Group(),mat=new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide});
+  const D=LAND.z1-LAND.z0,geos=[];
+  const line=new THREE.PlaneGeometry(0.7,D);geos.push(line);          // xy平面で作って、あとでねかせる（y → おく行き）
+  for(let v=LAND.z0+4;v<=LAND.z1-3;v+=6.5){
+    const s=new THREE.Shape();
+    if(kind==='K'){s.moveTo(0.3,-1.7);s.lineTo(2.9,0);s.lineTo(0.3,1.7);s.closePath();}
+    else{s.moveTo(0.3,-1.7);s.absarc(0.3,0,1.7,-Math.PI/2,Math.PI/2,false);s.closePath();}
+    const sg=new THREE.ShapeGeometry(s,16);sg.translate(0,v,0);geos.push(sg);
+  }
+  const geo=mergeGeometries(geos.map(q=>{const t=q.toNonIndexed();t.deleteAttribute('uv');t.deleteAttribute('normal');return t;}));geo.rotateX(-Math.PI/2);
+  const m=new THREE.Mesh(geo,mat);m.position.y=0.16;m.renderOrder=2;g.add(m);g.visible=false;scene.add(g);
+  return {g,mat};
+}
+const symK=frontSymbol('K',CFG.colCold), symW=frontSymbol('W',CFG.colWarm);
+
+/* ===== 空気の流れ：道すじ（なめらかな曲線）の上を矢印が流れる =====
+   道すじは「前線からのきょり」でかいてあり、前線といっしょに動く（グループ grpK / grpW の中に入れてある）。 */
+const CLIP=[new THREE.Plane(new THREE.Vector3(1,0,0),-LAND.x0-0.5),new THREE.Plane(new THREE.Vector3(-1,0,0),LAND.x1-0.5)];   // 地面の外にはみ出した分はかかない
+const grpK=new THREE.Group(),grpW=new THREE.Group();scene.add(grpK,grpW);
+const TUBE_SEG=80, TUBE_RAD=6, LANES=[-9,0,9];
+const arrowGeo=(()=>{const a=new THREE.CylinderGeometry(0.3,0.3,2.2,10);a.rotateZ(-Math.PI/2);a.translate(-0.5,0,0);
+  const b=new THREE.ConeGeometry(0.85,1.8,14);b.rotateZ(-Math.PI/2);b.translate(1.5,0,0);return mergeGeometries([a,b]);})();   // +x向きの矢印
+const paths=[];
+function addPath(key,grp,color,pts2){
+  LANES.forEach((z,li)=>{
+    const curve=new THREE.CatmullRomCurve3(pts2.map(q=>new THREE.Vector3(q[0],q[1],z)),false,'centripetal'),len=curve.getLength();
+    const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,TUBE_SEG,0.15,TUBE_RAD,false),new THREE.MeshBasicMaterial({color,transparent:true,opacity:0.32,depthWrite:false,clippingPlanes:CLIP}));
+    tube.renderOrder=2;tube.geometry.setDrawRange(0,0);grp.add(tube);
+    const nA=Math.max(2,Math.round(len/9)),arrows=[];
+    for(let k=0;k<nA;k++){const m=new THREE.Mesh(arrowGeo,new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false,clippingPlanes:CLIP}));
+      m.scale.setScalar(0.95);m.renderOrder=3;m.visible=false;grp.add(m);arrows.push({mesh:m,off:k/nA*len+li*2.3});}
+    paths.push({key,curve,len,tube,arrows});});
+}
+// 寒冷前線：つめたい空気が地面にそって進み、もぐりこむ
+addPath('Kc',grpK,CFG.colColdArrow,[[-25,1.4],[-14,1.4],[-3.6,1.4]]);
+// 寒冷前線：あたたかい空気が急におし上げられる
+addPath('Kw',grpK,CFG.colWarm,[[10,1.5],[5.5,1.6],[2.8,2.8],[1.6,5.6],[0.8,10],[-0.2,15],[-0.8,19]]);
+// 温暖前線：あたたかい空気が、つめたい空気の上にゆるやかにはい上がる
+addPath('W',grpW,CFG.colWarm,[[-10,1.5],[-4,1.6],[1,2.6],...[5,10,16,22,28,33].map(d=>[d,hW(d)+1.7])]);
+function fracWhere(curve,test){const n=400;for(let i=0;i<=n;i++)if(test(curve.getPointAt(i/n)))return i/n;return 1;}
+FVW=fracWhere(paths.find(q=>q.key==='W').curve,p=>p.x>0);   // 温暖前線：前線にとどくまで（＝地面を進む部分）
+
+/* ===== 雲：グレーのもこもこした塊（雲のでき方アプリと同じ作り）を組み合わせる ===== */
+const cCloud=new THREE.Color(0xc4cad2),cCloudEm=new THREE.Color(0x4c535c),cDark=new THREE.Color(0x767e8a),cDarkEm=new THREE.Color(0x23282e),cMid=new THREE.Color(0x9aa2ad),cMidEm=new THREE.Color(0x343a42);
+const mkMat=()=>new THREE.MeshStandardMaterial({color:cCloud.clone(),emissive:cCloudEm.clone(),emissiveIntensity:0.4,roughness:0.6,transparent:true,opacity:0,depthWrite:false});
+const matCK=mkMat(),matCW=mkMat();
+const blobGeo=(()=>{const g=new THREE.IcosahedronGeometry(1,10);g.deleteAttribute('normal');g.deleteAttribute('uv');const m=mergeVertices(g);m.computeVertexNormals();return m;})();
+const blobBase=blobGeo.attributes.position.array.slice();
+function shapeBlob(t){
+  const pos=blobGeo.attributes.position,b=blobBase,n=pos.count;
+  for(let i=0;i<n;i++){const x=b[i*3],y=b[i*3+1],z=b[i*3+2];
+    const n1=Math.sin(1.7*x+0.9*y+t*0.5)*Math.cos(1.3*y-1.1*z+t*0.4);
+    const n2=Math.sin(4.1*x+2.3*z+t*0.9)*Math.sin(3.7*y+1.9*x-t*0.7)+0.5*Math.sin(5.3*z+t*0.6);
+    const rr=1+0.07*n1+0.17*n2;pos.setXYZ(i,x*rr,y*rr,z*rr);}
+  pos.needsUpdate=true;blobGeo.computeVertexNormals();
+}
+const mkBlob=(mat,ry)=>{const m=new THREE.Mesh(blobGeo,mat);m.rotation.y=ry;m.renderOrder=5;m.frustumCulled=false;m.visible=false;scene.add(m);return m;};
+// 寒冷前線：たてにのびる雲（積乱雲）＝ 下のかたまり・上へのびる柱・てっぺんの広がり
+const CK={base:mkBlob(matCK,0.4),tower:mkBlob(matCK,2.1),top:mkBlob(matCK,4.0), x:-1.6, y0:6.4, sMin:1.6, sMax:9.4};
+// 温暖前線：横に広がる雲（乱層雲）＝ 前線面の坂にそって、うすいかたまりを横にならべる
+const CW=[4,10.5,17,23.5,30].map((d,i)=>({d,y:hW(d)+5.3,m:mkBlob(matCW,i*1.3)}));
+const CW_BASE=d=>hW(d)+3.4;   // 雨がふりはじめる高さ（雲の底）
+
+// 雨（強い雨：太く長く速い ／ 弱い雨：細く短くゆっくり）
+const rainMax=CFG.rainK+CFG.rainW;
+const rain=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial({color:0x2f6fe0}),rainMax);
+rain.instanceMatrix.setUsage(THREE.DynamicDrawUsage);rain.frustumCulled=false;rain.count=0;scene.add(rain);
+const dropsK=[],dropsW=[];
+{const r=seeded(41);
+ for(let i=0;i<CFG.rainK;i++)dropsK.push({x:-7+r()*8.6,z:-11+r()*22,ph:r(),sp:1.5+r()*0.7});
+ for(let i=0;i<CFG.rainW;i++)dropsW.push({x:1+r()*31,z:-11+r()*22,ph:r(),sp:0.55+r()*0.3});}
+
+/* ===================== 音（Web Audio） ===================== */
+let AC=null,rainGain=null,master=null;
+function initAudio(){
+  if(AC||!CFG.sound){if(AC&&AC.state==='suspended')AC.resume();return;}
+  try{
+    AC=new (window.AudioContext||window.webkitAudioContext)();AC.resume();
+    master=AC.createGain();master.gain.value=S.mute?0:1;master.connect(AC.destination);
+    const buf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    const src=AC.createBufferSource();src.buffer=buf;src.loop=true;const f=AC.createBiquadFilter();f.type='highpass';f.frequency.value=2500;
+    rainGain=AC.createGain();rainGain.gain.value=0;src.connect(f);f.connect(rainGain);rainGain.connect(master);src.start();
+  }catch(e){AC=null;}
+}
+function tone(freq,dur,vol=0.15,type='sine',delay=0){
+  if(!AC)return;const t=AC.currentTime+delay,o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=freq;
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+0.02);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+0.05);
+}
+const sClick=()=>tone(660,0.08,0.1,'triangle');
+const sStage=()=>{tone(784,0.4,0.12);tone(1047,0.5,0.12,'sine',0.1);};
+
+/* ===================== 画面まわり ===================== */
+const R=(k,r)=>`<ruby>${k}<rt>${r}</rt></ruby>`;
+const KUUKI=R('空気','くうき'),KAN=R('寒冷前線','かんれいぜんせん'),ON=R('温暖前線','おんだんぜんせん'),KUMO=R('雲','くも'),AME=R('雨','あめ'),KION=R('気温','きおん');
+const TUYOI=R('強','つよ')+'い',YOWAI=R('弱','よわ')+'い';
+const CAPTIONS={
+  K:[`${R('青','あお')}はつめたい${KUUKI}（${R('寒気','かんき')}）、${R('赤','あか')}はあたたかい${KUUKI}（${R('暖気','だんき')}）です。`,
+     `つめたい${KUUKI}がもぐりこんで${R('進','すす')}むところが「${KAN}」です。`,
+     `${R('軽','かる')}いあたたかい${KUUKI}は、${R('急','きゅう')}におし${R('上','あ')}げられます。`,
+     `たてにのびる${KUMO}（${R('積乱雲','せきらんうん')}）ができ、${TUYOI}${AME}が${R('短','みじか')}い${R('時間','じかん')}ふります。`,
+     `${KAN}が${R('通','とお')}りすぎると、${KION}が${R('下','さ')}がります。`],
+  W:[`${R('赤','あか')}はあたたかい${KUUKI}（${R('暖気','だんき')}）、${R('青','あお')}はつめたい${KUUKI}（${R('寒気','かんき')}）です。`,
+     `あたたかい${KUUKI}がはい${R('上','あ')}がって${R('進','すす')}むところが「${ON}」です。`,
+     `あたたかい${KUUKI}は、ゆるやかに${R('上','あ')}がっていきます。`,
+     `${R('横','よこ')}に${R('広','ひろ')}がる${KUMO}（${R('乱層雲','らんそううん')}）ができ、${YOWAI}${AME}が${R('長','なが')}い${R('時間','じかん')}ふります。`,
+     `${ON}が${R('通','とお')}りすぎると、${KION}が${R('上','あ')}がります。`],
+  C:[`${KAN}と${ON}をくらべましょう。`,
+     `${KAN}の${KUMO}はたてにのび、${ON}の${KUMO}は${R('横','よこ')}に${R('広','ひろ')}がります。`,
+     `${KAN}は${TUYOI}${AME}が${R('短','みじか')}く、${ON}は${YOWAI}${AME}が${R('長','なが')}くふります。`],
+};
+const cache={};
+function setHTML(id,html){if(cache[id]!==html){cache[id]=html;$(id).innerHTML=html;}}
+function setWx(id,on,html){setHTML(id,on?html:'？');$(id).classList.toggle('q',!on);}
+function syncUI(){
+  setHTML('caption',CAPTIONS[S.scene][S.stage]);
+  const end=S.scene==='C'?S.rainK>0.3:S.pass>0.6;
+  setWx('kWx1',S.scene!=='W'&&S.rainK>0.3,`⛈ ${TUYOI}${AME}・${R('短','みじか')}い`);
+  setWx('kWx2',S.scene!=='W'&&end,`${KION}が${R('下','さ')}がる ⬇`);
+  setWx('wWx1',S.scene!=='K'&&S.rainW>0.3,`🌧 ${YOWAI}${AME}・${R('長','なが')}い`);
+  setWx('wWx2',S.scene!=='K'&&end,`${KION}が${R('上','あ')}がる ⬆`);
+  setHTML('playBtn',S.mode==='play'?`⏸ ${R('止','と')}める`:`▶ ${R('自動','じどう')}`);
+  const sc=$('scrub');if(!sc._drag){const v=String(Math.round(S.p*1000));if(sc.value!==v)sc.value=v;}
+}
+
+/* ===================== 毎フレームの更新 ===================== */
+let prevStage=0;
+function update(dt){
+  if(S.paused)return;
+  S.elapsed+=dt;S.frames++;
+  const total=SCENES[S.scene].N*CFG.stepSeconds;
+  if(S.mode==='play'){S.p+=dt/total;if(S.p>=1){S.p=1;S.mode='idle';}}
+  else if(S.mode==='step'){S.p+=dt/total*CFG.stepSpeed;if(S.p>=S.targetP){S.p=S.targetP;S.mode='idle';}}
+  derive();
+  if(S.stage!==prevStage){if(S.stage>prevStage)sStage();prevStage=S.stage;}
+  updateVisuals(dt);
+}
+const _X=new THREE.Vector3(1,0,0),_T=new THREE.Vector3();
+const edgeFade=x=>smooth(LAND.x1+2,LAND.x1-5,x);   // 地面の右はしに近づいた雲は小さくして消す
+function updateVisuals(dt){
+  const t=S.elapsed,hasK=S.fK!==null,hasW=S.fW!==null,fK=hasK?S.fK:0,fW=hasW?S.fW:0,zF=LAND.z1;
+  updateAir();
+  // 前線の記号
+  symK.g.visible=hasK&&S.symK>0.01;symK.g.position.x=fK;symK.mat.opacity=S.symK;
+  symW.g.visible=hasW&&S.symW>0.01;symW.g.position.x=fW;symW.mat.opacity=S.symW;
+  // 空気の流れ：道すじ（管）を rev の分だけのばし、矢印は道すじにそって流れる
+  grpK.visible=hasK;grpK.position.x=fK;grpW.visible=hasW;grpW.position.x=fW;
+  for(const q of paths){
+    const rev=q.key==='Kc'?S.revKc:q.key==='Kw'?S.revKw:S.revW;
+    q.tube.geometry.setDrawRange(0,Math.round(clamp(rev,0,1)*TUBE_SEG)*TUBE_RAD*6);
+    for(const a of q.arrows){
+      const s=(t*CFG.flowSpeed+a.off)%q.len,mask=clamp(s/2.5,0,1)*clamp((rev*q.len-s)/2.5,0,1),m=a.mesh;
+      m.visible=mask>0.01;if(!m.visible)continue;
+      const u=s/q.len;q.curve.getPointAt(u,m.position);q.curve.getTangentAt(u,_T);m.quaternion.setFromUnitVectors(_X,_T);
+      m.material.opacity=0.95*mask;}
+  }
+  // 雲
+  const anyCloud=(hasK&&S.cloudK>0.01)||(hasW&&S.cloudW>0.01);
+  if(anyCloud)shapeBlob(t);
+  {const c=hasK?S.cloudK:0,on=c>0.01;CK.base.visible=CK.tower.visible=on;CK.top.visible=false;
+   if(on){const x=fK+CK.x,g=smooth(0.15,1,c),sy=lerp(CK.sMin,CK.sMax,g),k0=lerp(0.35,1,smooth(0,0.35,c));
+     CK.base.position.set(x,CK.y0+1.9,0);CK.base.scale.set(6.2*k0,2.7*k0,10.5*k0);
+     CK.tower.position.set(x-0.3,CK.y0+sy,0);CK.tower.scale.set(lerp(3,4.7,g),sy,lerp(6,9,g));
+     const a=smooth(0.72,1,c);CK.top.visible=a>0.01;if(a>0.01){CK.top.position.set(x+1.2,CK.y0+2*sy-1.4,0);CK.top.scale.set(9*a,2.1*a,11*a);}
+     matCK.opacity=0.95*Math.min(1,c*2.2);matCK.color.copy(cCloud).lerp(cDark,S.rainK);matCK.emissive.copy(cCloudEm).lerp(cDarkEm,S.rainK);}}
+  {const c=hasW?S.cloudW:0;
+   CW.forEach((b,i)=>{const x=fW+b.d,k=smooth(i*0.16,i*0.16+0.36,c)*edgeFade(x+3);b.m.visible=k>0.01;
+     if(b.m.visible){b.m.position.set(x,b.y,0);b.m.scale.set(6.2*k,2.0*k,11*k);}});
+   if(c>0.01){matCW.opacity=0.95*Math.min(1,c*2.2);matCW.color.copy(cCloud).lerp(cMid,S.rainW);matCW.emissive.copy(cCloudEm).lerp(cMidEm,S.rainW);}}
+  // 雨
+  let nI=0;
+  if(hasK&&S.rainK>0.01){const n=Math.round(CFG.rainK*S.rainK),top=CK.y0+1;
+    for(let i=0;i<n;i++){const d=dropsK[i],f=(t*d.sp+d.ph)%1;M4.compose(V3.set(fK+d.x,lerp(top,0.8,f),d.z),Q0,SC.set(0.17,1.7,0.17));rain.setMatrixAt(nI++,M4);}}
+  if(hasW&&S.rainW>0.01){const n=Math.round(CFG.rainW*S.rainW);
+    for(let i=0;i<n;i++){const d=dropsW[i],x=fW+d.x;if(x>LAND.x1-1.5)continue;const f=(t*d.sp+d.ph)%1;
+      M4.compose(V3.set(x,lerp(CW_BASE(d.x),0.4,f),d.z),Q0,SC.set(0.1,0.65,0.1));rain.setMatrixAt(nI++,M4);}}
+  if(nI>0||rain.count>0){rain.count=nI;rain.instanceMatrix.needsUpdate=true;}
+  if(rainGain&&AC)rainGain.gain.setTargetAtTime(0.13*(hasK?S.rainK:0)+0.05*(hasW?S.rainW:0),AC.currentTime,0.2);
+  // 町と文字
+  town.visible=S.scene!=='C';
+  if(L.cold){
+    const xl=LAND.x0+8,xr=LAND.x1-10;
+    if(S.scene==='K'){put(L.cold,clamp(fK-15,xl,xr),4.6,zF,1);put(L.cold2,0,0,0,0);put(L.warm,clamp(fK+17,xl,xr),15,zF,1);}
+    else if(S.scene==='W'){put(L.warm,clamp(fW-13,xl+1,xr),15,zF,1);put(L.cold,clamp(fW+24,xl,xr-1),3.3,zF,1);put(L.cold2,0,0,0,0);}
+    else{put(L.cold,-32,4.6,zF,1);put(L.cold2,31,3.6,zF,1);put(L.warm,-5,15,zF,1);}
+    put(L.frontK,fK,-1.75,zF+0.6,hasK?S.symK:0);put(L.frontW,fW,-1.75,zF+0.6,hasW?S.symW:0);
+    put(L.cloudK,fK+9.5,20.5,0,hasK?smooth(0.7,1,S.cloudK):0);
+    put(L.cloudW,Math.min(fW+19,LAND.x1-12),hW(19)+10.5,0,hasW?smooth(0.7,1,S.cloudW):0);
+    const tv=S.scene==='C'?0:1;
+    put(L.tWarm,CFG.townX,5.6,CFG.townZ,tv*(1-S.townCold));put(L.tCold,CFG.townX,5.6,CFG.townZ,tv*S.townCold);
+  }
+}
+
+/* ===================== 操作 ===================== */
+function setP(p){S.p=clamp(p,0,1);S.mode='idle';derive();prevStage=S.stage;}
+function play(){if(S.p>=0.999)S.p=0;S.mode='play';}
+function pause(){S.mode='idle';}
+function next(){const N=SCENES[S.scene].N;let t;for(let k=1;k<=N;k++){if(k/N>S.p+0.004){t=k/N;break;}}if(t===undefined)return;S.targetP=t;S.mode='step';}
+function reset(){setP(0);updateVisuals(0);}
+function setScene(sc){
+  S.scene=sc;setP(0);
+  $('selK').classList.toggle('sel',sc==='K');$('selW').classList.toggle('sel',sc==='W');$('selC').classList.toggle('sel',sc==='C');
+  updateVisuals(0);syncUI();
+}
+function showHelp(v){S.paused=v;$('help').classList.toggle('hide',!v);if(rainGain&&AC&&v)rainGain.gain.setTargetAtTime(0,AC.currentTime,0.05);}
+
+function bind(id,fn){$(id).addEventListener('click',e=>{initAudio();sClick();fn(e);});}
+bind('selK',()=>setScene('K'));bind('selW',()=>setScene('W'));bind('selC',()=>setScene('C'));
+bind('resetBtn',reset);
+bind('playBtn',()=>S.mode==='play'?pause():play());
+bind('nextBtn',next);
+bind('helpBtn',()=>showHelp(true));
+bind('viewBtn',()=>{controls.reset();fitView();});
+bind('muteBtn',()=>{S.mute=!S.mute;if(master)master.gain.value=S.mute?0:1;$('muteBtn').textContent=S.mute?'🔇':'🔊';});
+bind('startBtn',()=>{S.started=true;showHelp(false);});
+{const sc=$('scrub');
+ sc.addEventListener('input',()=>{sc._drag=true;setP(sc.value/1000);updateVisuals(0);});
+ ['change','pointerup','touchend'].forEach(ev=>sc.addEventListener(ev,()=>{sc._drag=false;}));}
+
+/* iPad対策：ダブルタップ拡大・ピンチ・スクロールを止める */
+{let lastTap=0;
+ document.addEventListener('touchend',e=>{const now=Date.now(),ui=e.target.closest&&e.target.closest('button,input');if(now-lastTap<300&&!ui)e.preventDefault();lastTap=now;},{passive:false});
+ document.addEventListener('touchmove',e=>{const ok=e.target.closest&&e.target.closest('input[type=range],#helpCard');if(!ok)e.preventDefault();},{passive:false});
+ ['gesturestart','gesturechange','gestureend'].forEach(n=>document.addEventListener(n,e=>e.preventDefault()));
+ document.addEventListener('dblclick',e=>e.preventDefault());
+ document.addEventListener('contextmenu',e=>e.preventDefault());}
+
+/* ===================== 起動 ===================== */
+$('ver').textContent=CFG.version;
+setScene(CFG.startScene);fitView();
+new ResizeObserver(()=>fitView()).observe(stageEl);
+window.addEventListener('resize',fitView);
+// フォントを待ってから3D内の文字を作る（読めなくても2.5秒で先へ進む）
+Promise.race([document.fonts.load('700 56px "BIZ UDPGothic"','寒冷温暖前線空気積乱層雲'),new Promise(r=>setTimeout(r,2500))]).catch(()=>{}).then(()=>{
+  buildLabels();updateVisuals(0);fitView();});
+
+let last=performance.now();
+function loop(now){
+  const dt=Math.min((now-last)/1000,1/30);last=now;   // 120Hzでも速さが変わらないよう、経過時間で動かす（1/30秒で上限）
+  update(dt);controls.update();syncUI();
+  renderer.render(scene,camera);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ===================== テスト用フック =====================
+   ・空気のかたまり（air.mesh）は .position を動かさず、S.fK / S.fW（前線の位置）から頂点を毎フレーム作り直している。
+   ・矢印は道すじ（paths[i].curve、前線からのきょりでかいた曲線）の上の位置を S.elapsed から毎フレーム計算して置き、
+     グループ grpK / grpW の position.x（＝前線の位置）でまとめて動かしている（arrows[i].mesh が実体）。 */
+window.__game={
+  state:S,CFG,camera,scene,paths,air,grpK,grpW,town,labels:L,
+  api:{
+    tick(n=1,dt=1/60){for(let i=0;i<n;i++)update(dt);syncUI();renderer.render(scene,camera);return this.info();},
+    start(){S.started=true;showHelp(false);},
+    setP(p){setP(p);updateVisuals(0);},
+    setScene,play,pause,next,reset,showHelp,hcAt,
+    info(){return {scene:S.scene,p:S.p,mode:S.mode,stage:S.stage,fK:S.fK,fW:S.fW,revKc:S.revKc,revKw:S.revKw,revW:S.revW,
+      cloudK:S.cloudK,rainK:S.rainK,cloudW:S.cloudW,rainW:S.rainW,pass:S.pass,townCold:S.townCold,rainCount:rain.count,FVW,
+      visibleArrows:paths.reduce((n,q)=>n+q.arrows.filter(a=>a.mesh.visible).length,0),frames:S.frames,elapsed:S.elapsed,paused:S.paused};}
+  }
+};
+</script>
+</body>
+</html>
