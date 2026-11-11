@@ -68,7 +68,7 @@
 </style>
 </head>
 <body>
-<!-- build: 2026-11-11a zensen -->
+<!-- build: 2026-11-11b zensen -->
 <div id="stage">
   <div id="caption"></div>
   <button id="helpBtn" aria-label="せつめい">？</button>
@@ -110,7 +110,7 @@ import { mergeVertices, mergeGeometries } from 'three/addons/utils/BufferGeometr
 
 /* ===================== 設定（ここの数値だけ直せば調整できます） ===================== */
 const CFG = {
-  version: 'v2026-11-11a',
+  version: 'v2026-11-11b',
   startScene: 'K',             // 最初に見る場面：'K'（寒冷前線）/ 'W'（温暖前線）/ 'C'（くらべる）
   stepSeconds: 10,             // 1だんかい（「次へ」1回ぶん）にかける秒数
   stepSpeed: 1.5,              // 「次へ」で進むときの速さ（自動の何倍か）
@@ -124,6 +124,9 @@ const CFG = {
   wH: 14, wLen: 26,                // 温暖前線：高さ・坂の長さ（大きいほどゆるやか）
   airMid: 13, airTop: 27,      // あたたかい空気の色：airMid まではっきりぬり、airTop へ向けてうすくする
   coldAlpha: 0.42, warmAlpha: 0.4,
+  cloudSoft: 0.8,              // 雲のふちのぼんやり度（大きいほどふちが広くうすく消える。0でくっきり）
+  cloudEdge: 0.12,             // いちばんふちの濃さ（0で完全に消える）
+  cloudAlpha: 0.96,            // 雲の濃さ
   flowSpeed: 5.5,              // 矢印が流れる速さ
   viewTilt: 33,                // 見下ろす角度（度）
   panelReserve: 0.5,            // 右のカードの分だけ3Dを左へよせる割合（0でよせない、1でカードの幅ぶん）
@@ -346,15 +349,18 @@ function addPath(key,grp,color,pts2){
 // 寒冷前線：つめたい空気が地面にそって進み、もぐりこむ
 addPath('Kc',grpK,CFG.colColdArrow,[[-25,1.4],[-14,1.4],[-3.6,1.4]]);
 // 寒冷前線：あたたかい空気が急におし上げられる
-addPath('Kw',grpK,CFG.colWarm,[[10,1.5],[5.5,1.6],[2.8,2.8],[1.6,5.6],[0.8,10],[-0.2,15],[-0.8,19]]);
+addPath('Kw',grpK,CFG.colWarm,[[5.5,1.5],[3.4,1.7],[2.1,3],[1.3,6],[0.6,10],[-0.2,15],[-0.8,19]]);
 // 温暖前線：あたたかい空気が、つめたい空気の上にゆるやかにはい上がる
 addPath('W',grpW,CFG.colWarm,[[-10,1.5],[-4,1.6],[1,2.6],...[5,10,16,22,28,33].map(d=>[d,hW(d)+1.7])]);
 function fracWhere(curve,test){const n=400;for(let i=0;i<=n;i++)if(test(curve.getPointAt(i/n)))return i/n;return 1;}
 FVW=fracWhere(paths.find(q=>q.key==='W').curve,p=>p.x>0);   // 温暖前線：前線にとどくまで（＝地面を進む部分）
 
 /* ===== 雲：グレーのもこもこした塊（雲のでき方アプリと同じ作り）を組み合わせる ===== */
-const cCloud=new THREE.Color(0xc4cad2),cCloudEm=new THREE.Color(0x4c535c),cDark=new THREE.Color(0x767e8a),cDarkEm=new THREE.Color(0x23282e),cMid=new THREE.Color(0x9aa2ad),cMidEm=new THREE.Color(0x343a42);
-const mkMat=()=>new THREE.MeshStandardMaterial({color:cCloud.clone(),emissive:cCloudEm.clone(),emissiveIntensity:0.4,roughness:0.6,transparent:true,opacity:0,depthWrite:false});
+const cCloud=new THREE.Color(0xc4cad2),cCloudEm=new THREE.Color(0x4c535c),cDark=new THREE.Color(0xaab1bb),cDarkEm=new THREE.Color(0x3d434b),cMid=new THREE.Color(0x9aa2ad),cMidEm=new THREE.Color(0x343a42);
+const mkMat=()=>{const m=new THREE.MeshStandardMaterial({color:cCloud.clone(),emissive:cCloudEm.clone(),emissiveIntensity:0.4,roughness:0.6,transparent:true,opacity:0,depthWrite:false});
+  // ふち（見る向きに対してななめの面）ほどうすくして、輪郭をぼんやりさせる
+  m.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <opaque_fragment>',`diffuseColor.a*=mix(${CFG.cloudEdge.toFixed(2)},1.0,pow(clamp(abs(dot(normal,normalize(vViewPosition))),0.0,1.0),${CFG.cloudSoft.toFixed(2)}));\n#include <opaque_fragment>`);};
+  return m;};
 const matCK=mkMat(),matCW=mkMat();
 const blobGeo=(()=>{const g=new THREE.IcosahedronGeometry(1,10);g.deleteAttribute('normal');g.deleteAttribute('uv');const m=mergeVertices(g);m.computeVertexNormals();return m;})();
 const blobBase=blobGeo.attributes.position.array.slice();
@@ -368,9 +374,9 @@ function shapeBlob(t){
 }
 const mkBlob=(mat,ry)=>{const m=new THREE.Mesh(blobGeo,mat);m.rotation.y=ry;m.renderOrder=5;m.frustumCulled=false;m.visible=false;scene.add(m);return m;};
 // 寒冷前線：たてにのびる雲（積乱雲）＝ 下のかたまり・上へのびる柱・てっぺんの広がり
-const CK={base:mkBlob(matCK,0.4),tower:mkBlob(matCK,2.1),top:mkBlob(matCK,4.0), x:-1.6, y0:6.4, sMin:1.6, sMax:9.4};
+const CK={tower:mkBlob(matCK,2.1), x:-1.6, y0:6.4, sMin:1.6, sMax:9.4};
 // 温暖前線：横に広がる雲（乱層雲）＝ 前線面の坂にそって、うすいかたまりを横にならべる
-const CW=[4,10.5,17,23.5,30].map((d,i)=>({d,y:hW(d)+5.3,m:mkBlob(matCW,i*1.3)}));
+const CW={m:mkBlob(matCW,0),d0:3,d1:33,xc:0,top:0};   // 前線から d0〜d1 のあいだに1枚（地面のはしでは切る）
 const CW_BASE=d=>hW(d)+3.4;   // 雨がふりはじめる高さ（雲の底）
 
 // 雨（強い雨：太く長く速い ／ 弱い雨：細く短くゆっくり）
@@ -380,7 +386,7 @@ rain.instanceMatrix.setUsage(THREE.DynamicDrawUsage);rain.frustumCulled=false;ra
 const dropsK=[],dropsW=[];
 {const r=seeded(41);
  for(let i=0;i<CFG.rainK;i++)dropsK.push({x:-7+r()*8.6,z:-11+r()*22,ph:r(),sp:1.5+r()*0.7});
- for(let i=0;i<CFG.rainW;i++)dropsW.push({x:1+r()*31,z:-11+r()*22,ph:r(),sp:0.55+r()*0.3});}
+ for(let i=0;i<CFG.rainW;i++)dropsW.push({x:3+r()*30,z:-11+r()*22,ph:r(),sp:0.55+r()*0.3});}
 
 /* ===================== 音（Web Audio） ===================== */
 let AC=null,rainGain=null,master=null;
@@ -468,16 +474,15 @@ function updateVisuals(dt){
   // 雲
   const anyCloud=(hasK&&S.cloudK>0.01)||(hasW&&S.cloudW>0.01);
   if(anyCloud)shapeBlob(t);
-  {const c=hasK?S.cloudK:0,on=c>0.01;CK.base.visible=CK.tower.visible=on;CK.top.visible=false;
-   if(on){const x=fK+CK.x,g=smooth(0.15,1,c),sy=lerp(CK.sMin,CK.sMax,g),k0=lerp(0.35,1,smooth(0,0.35,c));
-     CK.base.position.set(x,CK.y0+1.9,0);CK.base.scale.set(6.2*k0,2.7*k0,10.5*k0);
-     CK.tower.position.set(x-0.3,CK.y0+sy,0);CK.tower.scale.set(lerp(3,4.7,g),sy,lerp(6,9,g));
-     const a=smooth(0.72,1,c);CK.top.visible=a>0.01;if(a>0.01){CK.top.position.set(x+1.2,CK.y0+2*sy-1.4,0);CK.top.scale.set(9*a,2.1*a,11*a);}
-     matCK.opacity=0.95*Math.min(1,c*2.2);matCK.color.copy(cCloud).lerp(cDark,S.rainK);matCK.emissive.copy(cCloudEm).lerp(cDarkEm,S.rainK);}}
-  {const c=hasW?S.cloudW:0;
-   CW.forEach((b,i)=>{const x=fW+b.d,k=smooth(i*0.16,i*0.16+0.36,c)*edgeFade(x+3);b.m.visible=k>0.01;
-     if(b.m.visible){b.m.position.set(x,b.y,0);b.m.scale.set(6.2*k,2.0*k,11*k);}});
-   if(c>0.01){matCW.opacity=0.95*Math.min(1,c*2.2);matCW.color.copy(cCloud).lerp(cMid,S.rainW);matCW.emissive.copy(cCloudEm).lerp(cMidEm,S.rainW);}}
+  {const c=hasK?S.cloudK:0,on=c>0.01;CK.tower.visible=on;
+   if(on){const x=fK+CK.x,g=smooth(0.15,1,c),sy=lerp(CK.sMin,CK.sMax,g);
+     CK.tower.position.set(x-0.3,CK.y0+sy,0);CK.tower.scale.set(lerp(3.4,5.4,g),sy,lerp(6,10,g));
+     matCK.opacity=CFG.cloudAlpha*Math.min(1,c*2.2);matCK.color.copy(cCloud).lerp(cDark,S.rainK);matCK.emissive.copy(cCloudEm).lerp(cDarkEm,S.rainK);}}
+  {const c=hasW?S.cloudW:0,on=c>0.01;CW.m.visible=false;
+   if(on){const x0=fW+CW.d0,x1f=Math.min(fW+CW.d1,LAND.x1-0.5),x1=x0+(x1f-x0)*smooth(0,0.8,c),hl=(x1-x0)/2;
+     if(hl>1){const xc=(x0+x1)/2,dc=xc-fW,sl=(hW(dc+2)-hW(dc-2))/4,k=smooth(0,0.5,c),yc=hW(dc)+5.9;
+       CW.m.visible=true;CW.m.position.set(xc,yc,0);CW.m.rotation.z=Math.atan(sl);CW.m.scale.set(hl,3.0*k,12*k);CW.xc=xc;CW.top=yc+3.0*k;}
+     matCW.opacity=CFG.cloudAlpha*Math.min(1,c*2.2);matCW.color.copy(cCloud).lerp(cMid,S.rainW);matCW.emissive.copy(cCloudEm).lerp(cMidEm,S.rainW);}}
   // 雨
   let nI=0;
   if(hasK&&S.rainK>0.01){const n=Math.round(CFG.rainK*S.rainK),top=CK.y0+1;
@@ -495,8 +500,8 @@ function updateVisuals(dt){
     else if(S.scene==='W'){put(L.warm,clamp(fW-13,xl+1,xr),15,zF,1);put(L.cold,clamp(fW+24,xl,xr-1),3.3,zF,1);put(L.cold2,0,0,0,0);}
     else{put(L.cold,-32,4.6,zF,1);put(L.cold2,31,3.6,zF,1);put(L.warm,-5,15,zF,1);}
     put(L.frontK,fK,-1.75,zF+0.6,hasK?S.symK:0);put(L.frontW,fW,-1.75,zF+0.6,hasW?S.symW:0);
-    put(L.cloudK,fK+9.5,20.5,0,hasK?smooth(0.7,1,S.cloudK):0);
-    put(L.cloudW,Math.min(fW+19,LAND.x1-12),hW(19)+10.5,0,hasW?smooth(0.7,1,S.cloudW):0);
+    put(L.cloudK,fK+8,22,0,hasK?smooth(0.7,1,S.cloudK):0);
+    put(L.cloudW,CW.xc,CW.top+2.4,0,(hasW&&CW.m.visible)?smooth(0.7,1,S.cloudW):0);
     const tv=S.scene==='C'?0:1;
     put(L.tWarm,CFG.townX,5.6,CFG.townZ,tv*(1-S.townCold));put(L.tCold,CFG.townX,5.6,CFG.townZ,tv*S.townCold);
   }
