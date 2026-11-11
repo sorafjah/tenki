@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>雨がふるしくみ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;}
+  body{font-family:"BIZ UDPGothic","Hiragino Sans","Yu Gothic",sans-serif;background:#e4f4ff;color:#1c2b3a;
+    touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+    display:flex;flex-direction:column;}
+  rt{font-size:.5em;font-weight:400;}
+  button,input{font-family:inherit;color:inherit;}
+  button{touch-action:manipulation;}
+  button:active{transform:translateY(2px);filter:brightness(.95);}
+
+  /* header */
+  #head{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f2faff;border-bottom:3px solid #1c2b3a;}
+  #head h1{margin:0;font-size:clamp(17px,2.2vw,24px);line-height:1.7;white-space:nowrap;}
+  #chips{flex:1;display:flex;gap:6px;justify-content:center;min-width:0;}
+  .chip{min-width:48px;min-height:48px;border-radius:14px;border:3px solid #1c2b3a;background:#fff;font-size:clamp(14px,1.7vw,18px);font-weight:700;
+    padding:0 10px;line-height:1.5;white-space:nowrap;display:flex;align-items:center;gap:5px;}
+  .chip .no{display:inline-flex;width:26px;height:26px;border-radius:50%;background:#1c2b3a;color:#fff;align-items:center;justify-content:center;font-size:15px;flex:none;}
+  .chip.on{background:#ffd84d;}
+  #helpBtn{width:48px;height:48px;border-radius:50%;border:3px solid #1c2b3a;background:#ffd84d;font-size:24px;font-weight:700;padding:0;flex:none;}
+
+  /* main */
+  #main{flex:1;min-height:0;display:flex;}
+  #stage{flex:1;min-width:0;min-height:0;position:relative;overflow:hidden;background:#cfeaff;}
+  #cv{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+  .lab{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-weight:700;line-height:1.7;text-align:center;
+    background:rgba(255,255,255,.93);border:2px solid #1c2b3a;border-radius:10px;padding:0 8px;}
+  .lab.warm{background:#ffe3cc;} .lab.cold{background:#dcebff;} .lab.yel{background:#fff3b8;}
+  .lab.plain{background:none;border:none;text-shadow:0 0 4px #fff,0 0 4px #fff,0 0 4px #fff,0 0 4px #fff;}
+  .lab.big{font-size:1.25em;}
+  #ver{position:absolute;left:8px;bottom:4px;font-size:11px;opacity:.6;pointer-events:none;}
+
+  #side{width:clamp(270px,35vw,420px);border-left:3px solid #1c2b3a;background:#fff;display:flex;flex-direction:column;min-height:0;}
+  #text{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px 6px;}
+  #text h2{margin:0 0 4px;font-size:clamp(18px,2.2vw,24px);line-height:1.8;}
+  #text p{margin:0 0 6px;font-size:clamp(15px,1.8vw,19px);line-height:2.1;}
+  #text .point{background:#fff7d6;border:2px solid #1c2b3a;border-radius:12px;padding:2px 10px;}
+  #ctrl{padding:8px 12px 10px;border-top:2px dashed #9db4c8;display:flex;flex-direction:column;gap:8px;}
+  #ctrl:empty{display:none;}
+  #ctrl .hint{font-size:clamp(14px,1.6vw,17px);font-weight:700;line-height:1.9;}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .choices.one{grid-template-columns:1fr;}
+  .choices button{min-height:52px;border-radius:14px;border:3px solid #1c2b3a;background:#bfe6ff;font-size:clamp(15px,1.7vw,18px);font-weight:700;line-height:1.6;padding:2px 6px;}
+  .choices button.on{background:#ffd84d;}
+  .stepper{display:flex;align-items:center;gap:6px;justify-content:center;font-weight:700;font-size:20px;}
+  .stepper button{width:56px;height:56px;border-radius:14px;border:3px solid #1c2b3a;background:#bfe6ff;font-size:24px;font-weight:700;padding:0;flex:none;}
+  .stepper input{width:96px;height:56px;border-radius:12px;border:3px solid #1c2b3a;background:#fff;font-size:26px;font-weight:700;text-align:center;
+    -webkit-user-select:text;user-select:text;-moz-appearance:textfield;appearance:textfield;padding:0;}
+  .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .stepper .unit{min-width:1.6em;} .stepper .unit:empty{display:none;}
+
+  /* footer */
+  #bar{background:#f2faff;border-top:3px solid #1c2b3a;padding:8px 10px;display:flex;gap:10px;align-items:center;justify-content:space-between;}
+  #bar button{min-height:56px;min-width:130px;border-radius:14px;border:3px solid #1c2b3a;background:#bfe6ff;font-size:20px;font-weight:700;padding:0 16px;line-height:1.6;white-space:nowrap;}
+  #bar button:disabled{opacity:.35;}
+  #nextBtn{background:#4cc36a !important;color:#fff;}
+  #stepNow{font-weight:700;font-size:18px;white-space:nowrap;}
+
+  /* start / help */
+  #help{position:fixed;inset:0;background:rgba(20,35,55,.72);display:flex;align-items:center;justify-content:center;z-index:10;padding:12px;}
+  #help.hide{display:none;}
+  #helpCard{background:#fff;border:4px solid #1c2b3a;border-radius:22px;max-width:720px;width:100%;max-height:100%;overflow:auto;padding:14px 22px 18px;}
+  #helpCard h1{margin:0 0 4px;font-size:clamp(24px,4vw,36px);text-align:center;line-height:1.8;}
+  #helpCard p{margin:2px 0;font-size:clamp(15px,2vw,19px);line-height:2;}
+  .how{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;margin:8px 0 10px;font-size:clamp(15px,2vw,19px);line-height:1.9;}
+  .how .ic{min-width:92px;height:44px;border:3px solid #1c2b3a;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:17px;padding:0 8px;background:#bfe6ff;white-space:nowrap;}
+  #teacher{border:2px dashed #9db4c8;border-radius:14px;padding:6px 10px 10px;margin:0 0 12px;}
+  #teacher .t{font-size:15px;font-weight:700;margin-bottom:4px;}
+  #startBtn{display:block;margin:0 auto;min-width:240px;min-height:64px;border-radius:32px;border:4px solid #1c2b3a;background:#4cc36a;color:#fff;font-size:26px;font-weight:700;line-height:1.6;}
+
+  @media (max-width:900px){ .chip .nm{display:none;} .chip{padding:0 8px;} }
+  @media (orientation:portrait),(max-width:640px){
+    #main{flex-direction:column;}
+    #side{width:auto;border-left:none;border-top:3px solid #1c2b3a;height:46%;}
+    #head h1{display:none;}
+  }
+  @media (max-height:520px){ #text p{line-height:1.9;} .stepper button,.stepper input{height:46px;} .choices button{min-height:44px;} #bar button{min-height:46px;} }
+</style>
+</head>
+<body>
+<!-- build: 2026-11-11a -->
+<div id="head">
+  <h1>{雨|あめ}がふるしくみ</h1>
+  <div id="chips"></div>
+  <button id="helpBtn" aria-label="せつめい">？</button>
+</div>
+<div id="main">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="labels"></div>
+    <div id="ver"></div>
+  </div>
+  <div id="side">
+    <div id="text"></div>
+    <div id="ctrl"></div>
+  </div>
+</div>
+<div id="bar">
+  <button id="prevBtn">◀ もどる</button>
+  <div id="stepNow"></div>
+  <button id="nextBtn">{次|つぎ}へ ▶</button>
+</div>
+
+<div id="help">
+  <div id="helpCard">
+    <h1>{雨|あめ}がふるしくみ</h1>
+    <p>{空気|くうき}が{上|あ}がって、{冷|ひ}えて、{雲|くも}ができて、{雨|あめ}になる。そのながれを、5つのステップで{見|み}ていくよ。</p>
+    <div class="how">
+      <div class="ic">{次|つぎ}へ ▶</div><div>{次|つぎ}のステップに{進|すす}むよ</div>
+      <div class="ic">◀ もどる</div><div>{前|まえ}のステップにもどるよ</div>
+      <div class="ic">△ ▽</div><div>{高|たか}さや{温度|おんど}を{変|か}えられるよ。{数字|すうじ}を{直接|ちょくせつ}{入|い}れることもできるよ</div>
+    </div>
+    <div id="teacher">
+      <div class="t">{先生|せんせい}{用|よう}：{動|うご}きの{速|はや}さ（1 ゆっくり 〜 5 {速|はや}い）</div>
+      <div id="speedBox"></div>
+    </div>
+    <button id="startBtn">はじめる</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ===================== settings ===================== */
+const CFG = {
+  version: 'v2026-11-11a',
+  groundTemp: 25,     // ground temperature (deg C)
+  lapse: 1,           // deg C per 100 m
+  maxH: 2000,         // max height in step 2 (m)
+  vapor: 12.8,        // water vapor in the air (g/m3) = saturates at 15 deg C
+  dots: 36,           // vapor dots in the magnifier
+  cloudDrops: 90,     // cloud droplets in step 4
+};
+const W = 1000, H = 640, GY = 560;   // logical scene size, ground line
+
+/* ===================== helpers ===================== */
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const lerp = (a,b,t) => a + (b-a)*t;
+const rb = s => s.replace(/\{([^|{}]+)\|([^{}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>');
+function mix(c1, c2, t){ const o=[0,1,2].map(i=>Math.round(lerp(c1[i],c2[i],t))); return `rgb(${o[0]},${o[1]},${o[2]})`; }
+// convert {kanji|yomi} in static HTML
+(function(){
+  const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), list = [];
+  while (tw.nextNode()) { const n = tw.currentNode; if (n.nodeValue.includes('{') && n.parentNode.nodeName !== 'SCRIPT') list.push(n); }
+  list.forEach(n => { const sp = document.createElement('span'); sp.innerHTML = rb(n.nodeValue); n.replaceWith(...sp.childNodes); });
+})();
+function store(key, val){
+  try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch(e) {}
+  return null;
+}
+
+/* number + buttons + direct input */
+function makeStepper(box, o){
+  let v = o.value;
+  box.innerHTML = rb(`<div class="stepper"><span>${o.label||''}</span><button class="dn" aria-label="へらす">▽</button>
+    <input type="number" inputmode="numeric" min="${o.min}" max="${o.max}" step="${o.step}"><span class="unit">${o.unit||''}</span>
+    <button class="up" aria-label="ふやす">△</button></div>`);
+  const inp = box.querySelector('input');
+  const set = (nv, silent) => { v = clamp(Math.round(nv), o.min, o.max); inp.value = v; if (!silent) o.onChange(v); };
+  box.querySelector('.dn').addEventListener('click', () => set(v - o.step));
+  box.querySelector('.up').addEventListener('click', () => set(v + o.step));
+  inp.addEventListener('change', () => { const n = parseFloat(inp.value); set(isNaN(n) ? v : n); });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); });
+  set(v, true);
+  return { set };
+}
+
+/* ===================== canvas ===================== */
+const cv = $('cv'), ctx = cv.getContext('2d'), stage = $('stage'), labels = $('labels');
+let view = { s:1, ox:0, oy:0, cw:0, ch:0, dpr:1 };
+function resize(){
+  const cw = stage.clientWidth, ch = stage.clientHeight, dpr = Math.min(window.devicePixelRatio||1, 2);
+  if (!cw || !ch) return;
+  cv.width = Math.round(cw*dpr); cv.height = Math.round(ch*dpr);
+  const s = Math.min(cw/W, ch/H);
+  view = { s, ox:(cw-W*s)/2, oy:(ch-H*s)/2, cw, ch, dpr };
+  labels.style.fontSize = Math.max(11, Math.min(22, 21*s)) + 'px';
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+
+/* HTML labels over the canvas (so that ruby can be used) */
+const labMap = new Map(); let labUsed = new Set();
+function lab(id, html, x, y, cls){
+  let e = labMap.get(id);
+  if (!e) { e = { el: document.createElement('div'), html:'', cls:'', x:-1, y:-1, shown:true }; labels.appendChild(e.el); labMap.set(id, e); }
+  if (e.html !== html) { e.el.innerHTML = rb(html); e.html = html; }
+  const c = 'lab ' + (cls||'');
+  if (e.cls !== c) { e.el.className = c; e.cls = c; }
+  const px = Math.round(view.ox + x*view.s), py = Math.round(view.oy + y*view.s);
+  if (e.x !== px || e.y !== py) { e.el.style.left = px+'px'; e.el.style.top = py+'px'; e.x = px; e.y = py; }
+  if (!e.shown) { e.el.style.display = ''; e.shown = true; }
+  labUsed.add(id);
+}
+function labEnd(){ labMap.forEach((e,id) => { if (!labUsed.has(id) && e.shown) { e.el.style.display = 'none'; e.shown = false; } }); labUsed = new Set(); }
+
+/* drawing parts */
+const INK = '#1c2b3a';
+function circle(x,y,r,fill,stroke,lw){ ctx.beginPath(); ctx.arc(x,y,Math.max(0,r),0,Math.PI*2); if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||2;ctx.stroke();} }
+function arrow(x1,y1,x2,y2,color,lw){
+  const a = Math.atan2(y2-y1,x2-x1), h = Math.max(10, (lw||4)*3);
+  ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw||4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2-Math.cos(a)*h*.7, y2-Math.sin(a)*h*.7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-Math.cos(a-.5)*h, y2-Math.sin(a-.5)*h); ctx.lineTo(x2-Math.cos(a+.5)*h, y2-Math.sin(a+.5)*h); ctx.closePath(); ctx.fill();
+}
+function sky(){ ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle = '#cfeaff'; ctx.fillRect(0,0,cv.width,cv.height);
+  const k = view.dpr*view.s; ctx.setTransform(k,0,0,k,view.dpr*view.ox,view.dpr*view.oy); }
+function ground(color){ ctx.fillStyle = color||'#9fd68a'; ctx.fillRect(-3000,GY,7000,3000); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-3000,GY); ctx.lineTo(4000,GY); ctx.stroke(); }
+function sun(x,y,r){
+  ctx.strokeStyle = '#f5a700'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  for (let i=0;i<12;i++){ const a = i*Math.PI/6 + T*0.2; ctx.beginPath(); ctx.moveTo(x+Math.cos(a)*(r+8), y+Math.sin(a)*(r+8)); ctx.lineTo(x+Math.cos(a)*(r+22), y+Math.sin(a)*(r+22)); ctx.stroke(); }
+  circle(x,y,r,'#ffd84d',INK,3);
+}
+const CLOUD = [[.16,.66,.3],[.36,.42,.4],[.6,.4,.42],[.83,.64,.32],[.5,.72,.34],[.3,.74,.28],[.7,.74,.28]];
+function cloud(x,y,w,h,fill){
+  for (const pass of [1,0]) { ctx.fillStyle = pass ? INK : (fill||'#ffffff'); ctx.beginPath();
+    for (const [cx,cy,r] of CLOUD) { ctx.moveTo(x+cx*w+r*h+pass*3, y+cy*h); ctx.ellipse(x+cx*w, y+cy*h, r*h*1.25+pass*3, r*h+pass*3, 0, 0, Math.PI*2); }
+    ctx.fill(); }
+}
+function drop(x,y,r,fill){ ctx.beginPath(); ctx.moveTo(x, y-r*1.9); ctx.quadraticCurveTo(x+r*1.1, y-r*.5, x+r, y); ctx.arc(x,y,r,0,Math.PI); ctx.quadraticCurveTo(x-r*1.1, y-r*.5, x, y-r*1.9);
+  ctx.fillStyle = fill||'#4a9be0'; ctx.fill(); ctx.strokeStyle = '#1f5f9e'; ctx.lineWidth = 1.5; ctx.stroke(); }
+function ice(x,y,r,rot){ ctx.beginPath(); for (let i=0;i<6;i++){ const a = (rot||0)+i*Math.PI/3; ctx[i?'lineTo':'moveTo'](x+Math.cos(a)*r, y+Math.sin(a)*r); } ctx.closePath();
+  ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.strokeStyle = '#3f8fd6'; ctx.lineWidth = 2; ctx.stroke(); }
+function mkPath(pts){
+  const seg = []; let len = 0;
+  for (let i=1;i<pts.length;i++){ const d = Math.hypot(pts[i][0]-pts[i-1][0], pts[i][1]-pts[i-1][1]); seg.push(d); len += d; }
+  return { pts, len, at(u){ let d = clamp(u,0,1)*len; for (let i=0;i<seg.length;i++){ if (d <= seg[i] || i === seg.length-1){ const t = seg[i] ? clamp(d/seg[i],0,1) : 0; return [lerp(pts[i][0],pts[i+1][0],t), lerp(pts[i][1],pts[i+1][1],t)]; } d -= seg[i]; } return pts[0]; } };
+}
+function drawPath(p, color){
+  ctx.strokeStyle = color; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.setLineDash([2,22]);
+  ctx.beginPath(); p.pts.forEach((q,i) => ctx[i?'lineTo':'moveTo'](q[0],q[1])); ctx.stroke(); ctx.setLineDash([]);
+  const n = p.pts.length; const a = p.pts[n-2], b = p.pts[n-1], d = Math.hypot(b[0]-a[0], b[1]-a[1]);
+  arrow(b[0]-(b[0]-a[0])/d*30, b[1]-(b[1]-a[1])/d*30, b[0]+(b[0]-a[0])/d*14, b[1]+(b[1]-a[1])/d*14, color, 10);
+}
+function blobs(p, n, speed, phase){
+  for (let i=0;i<n;i++){
+    const u = ((T*speed/p.len*100 + i/n + (phase||0)) % 1 + 1) % 1, q = p.at(u), a = clamp(Math.min(u*8, (1-u)*6), 0, 1);
+    ctx.globalAlpha = a*.85; circle(q[0], q[1], 22+u*12, '#ff9d5c', '#c85a17', 2.5); ctx.globalAlpha = 1;
+  }
+}
+
+/* ===================== state ===================== */
+let T = 0, step = 0, speedMul = 1;
+const ST = {
+  trig: 'sun',
+  h: 0, hTarget: 0,
+  temp: 25, dots: [], dust: [], dropR: [0,0,0,0,0,0],
+  mode: 'water', parts: [], respawn: [],
+  cyc: null,
+};
+
+/* ===================== step 1 : air goes up ===================== */
+const TRIG = {
+  sun:  { name:'{太陽|たいよう}', desc:'{太陽|たいよう}で{地面|じめん}があたたまると、その{上|うえ}の{空気|くうき}もあたたまって{上|あ}がるよ。{夏|なつ}の{夕立|ゆうだち}は、こうしてできるよ。' },
+  front:{ name:'{前線|ぜんせん}', desc:'あたたかい{空気|くうき}と{冷|つめ}たい{空気|くうき}がぶつかるところが{前線|ぜんせん}だよ。あたたかい{空気|くうき}が、{冷|つめ}たい{空気|くうき}の{上|うえ}にのぼっていくよ。' },
+  mount:{ name:'{山|やま}', desc:'{空気|くうき}が{山|やま}にぶつかると、{斜面|しゃめん}にそって{上|あ}がっていくよ。' },
+  low:  { name:'{低気圧|ていきあつ}', desc:'{低気圧|ていきあつ}の{中心|ちゅうしん}に{空気|くうき}が{集|あつ}まって、{上|あ}がっていくよ。' },
+};
+const P_SUN = [mkPath([[350,GY-20],[350,130]]), mkPath([[470,GY-20],[470,110]]), mkPath([[590,GY-20],[590,130]])];
+const P_FRONT = mkPath([[40,500],[400,512],[930,205]]);
+const P_MOUNT = mkPath([[40,490],[440,500],[700,150],[790,120]]);
+const P_LOW = [mkPath([[40,515],[440,515],[485,130]]), mkPath([[960,515],[560,515],[515,130]])];
+function draw1(){
+  sky();
+  const m = ST.trig;
+  if (m === 'sun') {
+    sun(150,95,48);
+    ground();
+    ctx.fillStyle = '#ffb27a'; ctx.fillRect(280,GY,380,26); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.strokeRect(280,GY,380,26);
+    // sunlight
+    ctx.strokeStyle = 'rgba(245,167,0,.8)'; ctx.lineWidth = 5; ctx.setLineDash([14,14]); ctx.lineDashOffset = -T*40;
+    for (const x of [300,410,520,630]) { ctx.beginPath(); ctx.moveTo(185+(x-300)*.08,135); ctx.lineTo(x,GY-4); ctx.stroke(); }
+    ctx.setLineDash([]);
+    cloud(370,30,200,70,'#ffffff');
+    P_SUN.forEach((p,i) => blobs(p, 3, 26, i*.37));
+    lab('s1a','{太陽|たいよう}',150,180,'yel');
+    lab('s1b','あたたまった{地面|じめん}',470,GY+50,'warm');
+    lab('s1c','あたたかい{空気|くうき}が{上|あ}がる',820,330,'warm');
+    arrow(820,300,820,200,'#e8742a',9);
+  } else if (m === 'front') {
+    ground();
+    ctx.beginPath(); ctx.moveTo(430,GY); ctx.quadraticCurveTo(760,GY-150,1000,GY-390); ctx.lineTo(1000,GY); ctx.closePath();
+    ctx.fillStyle = 'rgba(120,170,235,.55)'; ctx.fill(); ctx.strokeStyle = '#2f6fc0'; ctx.lineWidth = 4; ctx.stroke();
+    cloud(790,70,200,70,'#ffffff');
+    drawPath(P_FRONT,'rgba(232,116,42,.45)'); blobs(P_FRONT, 6, 30);
+    lab('s1a','あたたかい{空気|くうき}',170,420,'warm');
+    lab('s1b','{冷|つめ}たい{空気|くうき}',820,470,'cold');
+    lab('s1c','{前線|ぜんせん}',430,GY+48,'');
+    arrow(430,GY+26,430,GY+4,INK,4);
+  } else if (m === 'mount') {
+    ground();
+    ctx.beginPath(); ctx.moveTo(470,GY); ctx.lineTo(735,190); ctx.lineTo(1000,GY); ctx.closePath();
+    ctx.fillStyle = '#b9a27c'; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
+    cloud(700,40,210,70,'#ffffff');
+    drawPath(P_MOUNT,'rgba(232,116,42,.45)'); blobs(P_MOUNT, 6, 30);
+    lab('s1a','しめった{空気|くうき}',170,410,'warm');
+    lab('s1b','{山|やま}',760,440,'');
+    lab('s1c','{斜面|しゃめん}にそって{上|あ}がる',400,250,'warm');
+  } else {
+    ground();
+    cloud(390,30,220,76,'#ffffff');
+    P_LOW.forEach(p => { drawPath(p,'rgba(232,116,42,.45)'); blobs(p, 4, 30); });
+    circle(500,GY+2,34,'#ff6b5e',INK,3);
+    lab('s1a','{低|てい}',500,GY+2,'plain big');
+    lab('s1b','{空気|くうき}が{集|あつ}まる',210,440,'warm');
+    lab('s1c','{空気|くうき}が{集|あつ}まる',790,440,'warm');
+    lab('s1d','{上|あ}がる',660,260,'warm');
+  }
+}
+
+/* ===================== step 2 : expands and cools ===================== */
+function tempAt(h){ return CFG.groundTemp - h/100*CFG.lapse; }
+function draw2(k){
+  ST.h += (ST.hTarget - ST.h) * Math.min(1, k*2.2);
+  if (Math.abs(ST.hTarget - ST.h) < 0.5) ST.h = ST.hTarget;
+  sky(); ground();
+  const yOf = h => GY - 30 - h*0.2, f = ST.h/CFG.maxH;
+  // height scale
+  ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(250,yOf(0)); ctx.lineTo(250,yOf(CFG.maxH)); ctx.stroke();
+  for (let h=0; h<=CFG.maxH; h+=500) {
+    ctx.beginPath(); ctx.moveTo(238,yOf(h)); ctx.lineTo(262,yOf(h)); ctx.stroke();
+    lab('h'+h, `${h}m　<span style="color:${h<800?'#d9480f':'#1c6fd1'}">${tempAt(h)}℃</span>`, 130, yOf(h), 'plain');
+  }
+  for (let h=100; h<CFG.maxH; h+=100) { if (h%500) { ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(244,yOf(h)); ctx.lineTo(256,yOf(h)); ctx.stroke(); ctx.lineWidth = 3; } }
+  lab('hT','{高|たか}さと{温度|おんど}',150,yOf(CFG.maxH)-48,'');
+  // parcel
+  const r = 46 + f*46, cx = 560, cy = yOf(ST.h) - 30;
+  ctx.setLineDash([6,8]); ctx.strokeStyle = 'rgba(28,43,58,.5)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(262,yOf(ST.h)); ctx.lineTo(cx-r-4,yOf(ST.h)); ctx.stroke(); ctx.setLineDash([]);
+  const pl = 62 - f*40, pw = 9 - f*4.5, wob = Math.sin(T*3)*4;
+  for (let i=0;i<8;i++){ const a = i*Math.PI/4 + Math.PI/8, d0 = r+14+pl+wob, d1 = r+12+wob*.3;
+    arrow(cx+Math.cos(a)*d0, cy+Math.sin(a)*d0, cx+Math.cos(a)*d1, cy+Math.sin(a)*d1, '#5b6b7d', pw); }
+  circle(cx, cy, r, f < .5 ? mix([255,157,92],[255,232,180],f*2) : mix([255,232,180],[140,190,245],f*2-1), INK, 3);
+  const t = tempAt(ST.h);
+  lab('pT', `${Math.round(t)}℃`, cx, cy, 'plain big');
+  lab('pN', '{空気|くうき}のかたまり', cx, cy + r + 96, '');
+  lab('pP', f < .34 ? 'まわりから{押|お}す{力|ちから}：{強|つよ}い' : f < .67 ? 'まわりから{押|お}す{力|ちから}：{中|ちゅう}くらい' : 'まわりから{押|お}す{力|ちから}：{弱|よわ}い', 800, 60, f < .34 ? 'warm' : f < .67 ? 'yel' : 'cold');
+  lab('pS', f < .05 ? '{地上|ちじょう}' : f > .6 ? 'ふくらんで、{冷|ひ}えた' : 'ふくらんできた', 830, cy, 'plain');
+}
+
+/* ===================== step 3 : vapor -> droplets ===================== */
+const CAP = [[0,4.8],[5,6.8],[10,9.4],[15,12.8],[20,17.3],[25,23.1],[30,30.4]];
+function capAt(t){ t = clamp(t,0,30); for (let i=1;i<CAP.length;i++) if (t <= CAP[i][0]) return lerp(CAP[i-1][1], CAP[i][1], (t-CAP[i-1][0])/5); return CAP[6][1]; }
+const MG = { x:330, y:300, r:225 };
+function init3(){
+  ST.dust = []; for (let i=0;i<6;i++){ const a = i*Math.PI/3 + .4, d = i%2 ? 135 : 80; ST.dust.push([MG.x+Math.cos(a)*d, MG.y+Math.sin(a)*d]); }
+  ST.dots = []; for (let i=0;i<CFG.dots;i++){ const a = Math.random()*6.283, d = Math.sqrt(Math.random())*(MG.r-30);
+    const bx = MG.x+Math.cos(a)*d, by = MG.y+Math.sin(a)*d; ST.dots.push({ bx, by, x:bx, y:by, p1:Math.random()*6.283, p2:Math.random()*6.283, c:0 }); }
+  ST.dropR = [0,0,0,0,0,0];
+}
+function draw3(k){
+  sky();
+  const cap = capAt(ST.temp), ex = Math.max(0, CFG.vapor - cap), nC = Math.round(CFG.dots*ex/CFG.vapor);
+  // magnifier
+  ctx.strokeStyle = INK; ctx.lineWidth = 22; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(MG.x-MG.r*.72, MG.y+MG.r*.72); ctx.lineTo(70,600); ctx.stroke();
+  circle(MG.x, MG.y, MG.r, '#f4fbff', INK, 7);
+  const cnt = [0,0,0,0,0,0];
+  ST.dots.forEach((d,i) => {
+    let tx = d.bx + Math.sin(T*1.3+d.p1)*14, ty = d.by + Math.cos(T*1.1+d.p2)*14;
+    const on = i < nC;
+    if (on) { const di = i%6, m = Math.floor(i/6), a = m*2.4+di; cnt[di]++; tx = ST.dust[di][0]+Math.cos(a)*(5+m*3); ty = ST.dust[di][1]+Math.sin(a)*(5+m*3); }
+    const rate = Math.min(1, k*(on?2.2:3)); d.x += (tx-d.x)*rate; d.y += (ty-d.y)*rate; d.c += ((on?1:0)-d.c)*Math.min(1,k*3);
+  });
+  ST.dust.forEach((q,i) => { const tr = cnt[i] ? 12+7*Math.sqrt(cnt[i]) : 0; ST.dropR[i] += (tr-ST.dropR[i])*Math.min(1,k*1.6);
+    if (ST.dropR[i] > 1) circle(q[0], q[1], ST.dropR[i], 'rgba(90,169,230,.6)', '#1f5f9e', 2.5); });
+  ST.dots.forEach(d => { ctx.globalAlpha = 1 - d.c*.75; circle(d.x, d.y, 6, d.c > .5 ? '#4a9be0' : 'rgba(191,230,255,.5)', '#3f8fd6', 1.8); ctx.globalAlpha = 1; });
+  ST.dust.forEach(q => circle(q[0], q[1], 5, '#8a6a4a', '#4d3a27', 1.5));
+  lab('m0','{空気|くうき}を{大|おお}きくして{見|み}ると',MG.x,34,'');
+  lab('m1','{水蒸気|すいじょうき}（{本当|ほんとう}は{目|め}に{見|み}えない）',MG.x+40,MG.y+MG.r+42,'cold');
+  lab('m2','ちり',ST.dust[3][0],ST.dust[3][1]-46,'plain');
+  if (nC > 0) lab('m3','{水|みず}のつぶ',ST.dust[4][0],ST.dust[4][1]-52,'plain');
+  // gauge
+  const gx = 680, gw = 130, by = 520, sc = 14;
+  ctx.fillStyle = '#bfe6ff'; ctx.fillRect(gx, by-Math.min(cap,CFG.vapor)*sc, gw, Math.min(cap,CFG.vapor)*sc);
+  ctx.strokeStyle = INK; ctx.lineWidth = 4; ctx.strokeRect(gx, by-cap*sc, gw, cap*sc);
+  if (cap > CFG.vapor) { ctx.setLineDash([8,6]); ctx.lineWidth = 2; ctx.strokeStyle = '#3f8fd6'; ctx.beginPath(); ctx.moveTo(gx,by-CFG.vapor*sc); ctx.lineTo(gx+gw,by-CFG.vapor*sc); ctx.stroke(); ctx.setLineDash([]); }
+  const nd = Math.round(ex*2.2);
+  for (let i=0;i<nd;i++) drop(gx+gw+72+(i%3)*32, by-10-Math.floor(i/3)*40 + Math.sin(T*3+i)*2, 10);
+  lab('g0','{空気|くうき}がふくめる{量|りょう}（わく）',gx+gw/2-10,by-cap*sc-28,'');
+  lab('g1','{水蒸気|すいじょうき}',gx+gw/2,by-Math.min(cap,CFG.vapor)*sc/2,'plain');
+  if (nd > 0) lab('g2','あふれた{分|ぶん}',gx+gw+104,by+28,'plain');
+  lab('g3', ex > 0 ? 'ふくみきれない → {水|みず}のつぶ（{凝結|ぎょうけつ}）' : 'まだ{水蒸気|すいじょうき}をふくめるよ', 770, 606, ex > 0 ? 'cold' : 'yel');
+  lab('g4', `{温度|おんど} ${ST.temp}℃`, 860, 50, ST.temp >= 15 ? 'warm big' : 'cold big');
+}
+
+/* ===================== step 4 : droplets grow and fall ===================== */
+const MODE = {
+  water:{ name:'{水|みず}のつぶの{雲|くも}', desc:'' },
+  ice:  { name:'{氷|こおり}のつぶ → {雨|あめ}', desc:'{冬|ふゆ}や{高|たか}い{空|そら}の{雲|くも}では、まず{氷|こおり}のつぶができて、{大|おお}きくなって{落|お}ちてくるよ。とちゅうでとけると、{雨|あめ}になるよ。' },
+  snow: { name:'{氷|こおり}のつぶ → {雪|ゆき}', desc:'{氷|こおり}のつぶが、とけないまま{地上|ちじょう}まで{落|お}ちてくると、{雪|ゆき}になるよ。' },
+};
+const CL = { x0:110, x1:590, y0:95, y1:235 }, MELT = 400;
+function newPart(){ const a = Math.random()*6.283, v = 22+Math.random()*26;
+  return { x:lerp(CL.x0,CL.x1,Math.random()), y:lerp(CL.y0,CL.y1,Math.random()), vx:Math.cos(a)*v, vy:Math.sin(a)*v, r:4, n:1, fall:false, rot:Math.random()*6, ph:Math.random()*6 }; }
+function init4(){ ST.parts = []; ST.respawn = []; for (let i=0;i<CFG.cloudDrops;i++) ST.parts.push(newPart()); }
+function draw4(k){
+  const iceMode = ST.mode !== 'water', P = ST.parts;
+  // move
+  for (const p of P) {
+    if (p.fall) { const vmax = ST.mode === 'snow' ? 75 : (iceMode && p.y < MELT ? 110 : 250); p.vy = Math.min(vmax, p.vy + 260*k); p.vx *= (1 - Math.min(1,k*2));
+      p.x += (p.vx + (ST.mode === 'snow' ? Math.sin(T*2+p.ph)*30 : 0))*k; p.y += p.vy*k; p.rot += k; }
+    else { p.x += p.vx*k; p.y += p.vy*k; p.rot += k*.5;
+      if (p.x < CL.x0) { p.x = CL.x0; p.vx = Math.abs(p.vx); } if (p.x > CL.x1) { p.x = CL.x1; p.vx = -Math.abs(p.vx); }
+      if (p.y < CL.y0) { p.y = CL.y0; p.vy = Math.abs(p.vy); } if (p.y > CL.y1) { p.y = CL.y1; p.vy = -Math.abs(p.vy); } }
+  }
+  // merge
+  for (let i=0;i<P.length;i++){ const a = P[i]; if (a.dead || a.y > CL.y1+30) continue;
+    for (let j=i+1;j<P.length;j++){ const b = P[j]; if (b.dead || b.y > CL.y1+30) continue;
+      const dx = a.x-b.x, dy = a.y-b.y, rr = (a.r+b.r)*1.25;
+      if (dx*dx+dy*dy < rr*rr) { const n = a.n+b.n; a.x = (a.x*a.n+b.x*b.n)/n; a.y = (a.y*a.n+b.y*b.n)/n; a.vx = (a.vx*a.n+b.vx*b.n)/n; a.vy = (a.vy*a.n+b.vy*b.n)/n;
+        a.n = n; a.r = Math.min(15, 4*Math.pow(n,.42)); b.dead = true; if (a.n >= 4) a.fall = true; } } }
+  for (let i=P.length-1;i>=0;i--){ const p = P[i];
+    if (!p.dead && p.y > GY-4) { p.dead = true; }
+    if (p.dead) { if (p.y > GY-4) for (let j=0;j<p.n;j++) ST.respawn.push(T + .3 + Math.random()*2.5); P.splice(i,1); } }
+  // particles removed by merging are already counted in the survivor (n); respawn only when one reaches the ground
+  for (let i=ST.respawn.length-1;i>=0;i--) if (ST.respawn[i] <= T) { ST.respawn.splice(i,1); P.push(newPart()); }
+
+  sky(); ground(ST.mode === 'snow' ? '#f3f7fb' : undefined);
+  cloud(50,40,600,215, iceMode ? '#eef2f7' : '#e3e9f0');
+  if (ST.mode === 'ice') { ctx.setLineDash([12,10]); ctx.strokeStyle = '#d9480f'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(40,MELT); ctx.lineTo(640,MELT); ctx.stroke(); ctx.setLineDash([]);
+    lab('z0','0℃　ここから{下|した}は、あたたかい',360,MELT-24,'warm'); lab('z1','とけて{雨|あめ}になる',470,MELT+60,'plain'); }
+  if (ST.mode === 'snow') { lab('z2','{地上|ちじょう}まで0℃より{低|ひく}い',360,MELT-24,'cold'); lab('z3','とけないので{雪|ゆき}',470,MELT+60,'plain'); }
+  for (const p of P) {
+    const liquid = !iceMode || (ST.mode === 'ice' && p.y > MELT);
+    if (liquid) { if (p.fall && p.y > CL.y1) drop(p.x, p.y, Math.max(5,p.r*.75)); else circle(p.x, p.y, p.r, '#6cb2ec', '#1f5f9e', 1.5); }
+    else ice(p.x, p.y, p.r*1.15, p.rot);
+  }
+  lab('c0', iceMode ? '{雲|くも}（{氷|こおり}のつぶ）' : '{雲|くも}（{水|みず}のつぶ）', 180, 30, '');
+  lab('c1','ぶつかって、くっつく',350,290,'yel');
+  lab('c2', ST.mode === 'snow' ? '{雪|ゆき}' : '{雨|あめ}', 110, GY-50, 'plain big');
+  // size comparison
+  ctx.fillStyle = '#ffffff'; ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(680,150,300,400,18) : ctx.rect(680,150,300,400); ctx.fill(); ctx.stroke();
+  lab('k0','{大|おお}きさくらべ',830,150,'yel');
+  circle(730,225,1.1,'#1f5f9e'); circle(730,225,13,null,'#d9480f',2);
+  lab('k1','{雲|くも}のつぶ<br>{約|やく}0.01mm',860,225,'plain');
+  circle(830,410,110,'#6cb2ec','#1f5f9e',3);
+  lab('k2','{雨|あめ}つぶ<br>1〜2mm',830,395,'plain');
+  lab('k3','{約|やく}100{倍|ばい}',830,470,'plain big');
+}
+
+/* ===================== step 5 : water cycle ===================== */
+const CYC = mkPath([[190,522],[215,300],[300,170],[560,120],[700,150],[770,290],[690,400],[560,470],[385,522],[190,522]]);
+const CYC_SEG = [.23,.40,.52,.66,.93];   // rise | to cloud | in cloud | rain | river -> sea
+function draw5(){
+  sky();
+  sun(120,90,46);
+  // land and mountain
+  ctx.beginPath(); ctx.moveTo(380,524); ctx.lineTo(560,460); ctx.lineTo(800,230); ctx.lineTo(1000,400); ctx.lineTo(1000,3000); ctx.lineTo(380,3000); ctx.closePath();
+  ctx.fillStyle = '#9fd68a'; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(700,326); ctx.lineTo(800,230); ctx.lineTo(905,325); ctx.closePath(); ctx.fillStyle = '#b9a27c'; ctx.fill(); ctx.stroke();
+  // sea
+  ctx.fillStyle = '#5aa9e6'; ctx.fillRect(-3000,524,3380,3000); ctx.strokeStyle = INK; ctx.beginPath(); ctx.moveTo(-3000,524); ctx.lineTo(380,524); ctx.stroke();
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3; for (let i=0;i<4;i++){ const x = 40+i*90 + Math.sin(T+i)*8, y = 560+(i%2)*30; ctx.beginPath(); ctx.moveTo(x,y); ctx.quadraticCurveTo(x+15,y-8,x+30,y); ctx.stroke(); }
+  // river
+  ctx.strokeStyle = '#5aa9e6'; ctx.lineWidth = 14; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(770,290); ctx.lineTo(690,400); ctx.lineTo(560,470); ctx.lineTo(385,524); ctx.stroke();
+  cloud(500,50,290,110,'#e9eef5');
+  // big arrows
+  const A = 'rgba(28,43,58,.28)';
+  arrow(140,470,150,300,A,12); arrow(180,240,400,120,A,12); arrow(830,150,850,235,A,12); arrow(640,470,460,530,A,12);
+  // moving water
+  const n = 22;
+  for (let i=0;i<n;i++){
+    const u = (T*0.045 + i/n) % 1, q = CYC.at(u), w = Math.sin(T*2+i*1.7)*10;
+    if (u < CYC_SEG[1]) { ctx.globalAlpha = .9; circle(q[0]+w, q[1], 7, 'rgba(255,255,255,.55)', '#3f8fd6', 2); ctx.globalAlpha = 1; }
+    else if (u < CYC_SEG[2]) circle(q[0], q[1]+w*.6, 5, '#6cb2ec', '#1f5f9e', 1.5);
+    else if (u < CYC_SEG[3]) drop(q[0]+((i%3)-1)*26, q[1], 7);
+    else circle(q[0], q[1], 6, '#d9efff', '#1f5f9e', 1.5);
+  }
+  lab('y0','{太陽|たいよう}',120,172,'yel');
+  lab('y1','① {蒸発|じょうはつ}',95,400,'warm');
+  lab('y2','② {上昇|じょうしょう}',250,130,'warm');
+  lab('y3','③ {凝結|ぎょうけつ}（{雲|くも}になる）',660,30,'cold');
+  lab('y4','④ {雨|あめ}',900,190,'cold');
+  lab('y5','⑤ {川|かわ}から{海|うみ}へ',600,555,'');
+  lab('y6','{海|うみ}',200,600,'plain big');
+  lab('y7','{水蒸気|すいじょうき}',320,330,'plain');
+}
+
+/* ===================== steps (text and controls) ===================== */
+const STEPS = [
+  { chip:'{上|あ}がる', title:'① {空気|くうき}が{上空|じょうくう}に{上|あ}がる',
+    text:'<p>{太陽|たいよう}にあたためられた{地面|じめん}が、まわりの{空気|くうき}をあたためるよ。あたたかい{空気|くうき}は{軽|かる}いので、{上|うえ}へ{上|あ}がっていくよ。</p><p class="point" id="trigDesc"></p>',
+    ctrl(box){
+      box.innerHTML = rb('<div class="hint">{上|あ}がるきっかけを、えらんでみてね</div><div class="choices">' +
+        Object.keys(TRIG).map(k => `<button data-k="${k}">${TRIG[k].name}</button>`).join('') + '</div>');
+      const upd = () => { box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === ST.trig)); $('trigDesc').innerHTML = rb(TRIG[ST.trig].desc); };
+      box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { ST.trig = b.dataset.k; upd(); }));
+      upd();
+    }, draw:draw1 },
+  { chip:'{冷|ひ}える', title:'② {上空|じょうくう}でふくらんで{冷|ひ}える',
+    text:'<p>{上空|じょうくう}は{地上|ちじょう}より{気圧|きあつ}が{低|ひく}くて、まわりから{押|お}す{力|ちから}が{弱|よわ}いよ。だから、{空気|くうき}はふくらむよ。</p><p>ふくらむと、{温度|おんど}が{下|さ}がるよ。{上空|じょうくう}ほど{寒|さむ}いのは、このためだよ。</p><p class="point">{目安|めやす}：100m{上|あ}がるごとに、{約|やく}1℃{下|さ}がるよ。</p>',
+    ctrl(box){
+      box.innerHTML = rb('<div class="hint">△をおすと、{空気|くうき}が{上|あ}がるよ</div><div id="hBox"></div>');
+      makeStepper($('hBox'), { label:rb('{高|たか}さ'), unit:'m', min:0, max:CFG.maxH, step:100, value:ST.hTarget, onChange:v => { ST.hTarget = v; } });
+    }, draw:draw2 },
+  { chip:'{雲|くも}', title:'③ {水蒸気|すいじょうき}が{水|みず}のつぶになって、{雲|くも}ができる',
+    text:'<p>{空気|くうき}は、{温度|おんど}が{低|ひく}いほど、ふくめる{水蒸気|すいじょうき}の{量|りょう}が{少|すく}なくなるよ。</p><p>ふくみきれなくなった{水蒸気|すいじょうき}は、{目|め}に{見|み}える{小|ちい}さな{水|みず}のつぶに{変|か}わるよ。これを「{凝結|ぎょうけつ}」というよ。{空気|くうき}の{中|なか}のちりに、{水|みず}のつぶがつくよ。</p><p class="point">{水|みず}のつぶや{氷|こおり}のつぶが{集|あつ}まったものが{雲|くも}だよ。{雲|くも}のつぶは{約|やく}0.01mm。{軽|かる}いので、うかんでいるよ。</p>',
+    ctrl(box){
+      box.innerHTML = rb('<div class="hint">▽をおして、{温度|おんど}を{下|さ}げてみてね</div><div id="tBox"></div>');
+      makeStepper($('tBox'), { label:rb('{温度|おんど}'), unit:'℃', min:0, max:25, step:5, value:ST.temp, onChange:v => { ST.temp = v; } });
+    }, enter(){ if (!ST.dots.length) init3(); }, draw:draw3 },
+  { chip:'{雨|あめ}', title:'④ つぶが{大|おお}きくなって{落|お}ちてくる',
+    text:'<p>{雲|くも}の{中|なか}でつぶどうしがぶつかってくっつくと、{重|おも}くなって{落|お}ちはじめるよ。</p><p>{雨|あめ}つぶの{大|おお}きさは1〜2mmくらい。{雲|くも}のつぶの{約|やく}100{倍|ばい}だよ。</p><p class="point" id="modeDesc"></p>',
+    ctrl(box){
+      box.innerHTML = rb('<div class="hint">{雲|くも}のしゅるいを、えらんでみてね</div><div class="choices one">' +
+        Object.keys(MODE).map(k => `<button data-k="${k}">${MODE[k].name}</button>`).join('') + '</div>');
+      const upd = () => { box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === ST.mode));
+        const d = $('modeDesc'); d.innerHTML = rb(MODE[ST.mode].desc); d.style.display = MODE[ST.mode].desc ? '' : 'none'; };
+      box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { ST.mode = b.dataset.k; init4(); upd(); }));
+      upd();
+    }, enter(){ init4(); }, draw:draw4 },
+  { chip:'めぐる', title:'⑤ {水|みず}はめぐる（{循環|じゅんかん}）',
+    text:'<p>ふった{雨|あめ}は、{川|かわ}や{海|うみ}に{流|なが}れて、また{蒸発|じょうはつ}して、{水蒸気|すいじょうき}になるよ。</p><p class="point">{水|みず}は「{蒸発|じょうはつ} → {上昇|じょうしょう} → {凝結|ぎょうけつ} → {雨|あめ} → {蒸発|じょうはつ}…」と、ぐるぐる{回|まわ}っているよ。</p><p>これで、{雨|あめ}がふるしくみは、おしまいだよ。</p>',
+    ctrl(box){ box.innerHTML = ''; }, draw:draw5 },
+];
+
+const chips = $('chips');
+STEPS.forEach((s,i) => { const b = document.createElement('button'); b.className = 'chip'; b.innerHTML = `<span class="no">${i+1}</span><span class="nm">${rb(s.chip)}</span>`; b.addEventListener('click', () => go(i)); chips.appendChild(b); });
+function go(n){
+  step = clamp(n, 0, STEPS.length-1);
+  const s = STEPS[step];
+  $('text').innerHTML = rb(`<h2>${s.title}</h2>${s.text}`); $('text').scrollTop = 0;
+  s.ctrl($('ctrl'));
+  if (s.enter) s.enter();
+  chips.querySelectorAll('.chip').forEach((c,i) => c.classList.toggle('on', i === step));
+  $('prevBtn').disabled = step === 0;
+  $('nextBtn').innerHTML = rb(step === STEPS.length-1 ? '{最初|さいしょ}から' : '{次|つぎ}へ ▶');
+  $('stepNow').textContent = `${step+1} / ${STEPS.length}`;
+  resize();
+}
+$('prevBtn').addEventListener('click', () => go(step-1));
+$('nextBtn').addEventListener('click', () => { if (step === STEPS.length-1) { ST.hTarget = 0; ST.h = 0; ST.temp = 25; ST.trig = 'sun'; ST.mode = 'water'; go(0); } else go(step+1); });
+
+/* start / help */
+let speedLv = parseInt(store('sikumi_speed'), 10); if (!(speedLv >= 1 && speedLv <= 5)) speedLv = 3;
+const setSpeed = v => { speedLv = v; speedMul = v/3; store('sikumi_speed', String(v)); };
+setSpeed(speedLv);
+makeStepper($('speedBox'), { label:'', unit:'', min:1, max:5, step:1, value:speedLv, onChange:setSpeed });
+$('startBtn').addEventListener('click', () => $('help').classList.add('hide'));
+$('helpBtn').addEventListener('click', () => $('help').classList.remove('hide'));
+$('ver').textContent = CFG.version;
+
+/* iPad : stop zoom, bounce and double tap */
+let lastTap = 0;
+document.addEventListener('touchend', e => { const now = Date.now(), ui = e.target.closest && e.target.closest('button,input'); if (now-lastTap < 300 && !ui) e.preventDefault(); lastTap = now; }, { passive:false });
+document.addEventListener('touchmove', e => { if (e.touches.length > 1 || !(e.target.closest && e.target.closest('#text,#helpCard'))) e.preventDefault(); }, { passive:false });
+['gesturestart','gesturechange','gestureend'].forEach(n => document.addEventListener(n, e => e.preventDefault()));
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+/* main loop (delta time, clamped to 1/30 s) */
+let last = 0;
+function frame(now){
+  const dt = Math.min((now-last)/1000, 1/30); last = now;
+  const k = dt*speedMul; T += k;
+  if (view.cw) { STEPS[step].draw(k); labEnd(); }
+  requestAnimationFrame(frame);
+}
+go(0); resize();
+requestAnimationFrame(t => { last = t; requestAnimationFrame(frame); });
+</script>
+</body>
+</html>
