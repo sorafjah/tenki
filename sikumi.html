@@ -247,7 +247,7 @@ function drawPath(p, color){
 }
 function blobs(p, n, speed, phase){
   for (let i=0;i<n;i++){
-    const u = ((T*speed/p.len*100 + i/n + (phase||0)) % 1 + 1) % 1, q = p.at(u), a = clamp(Math.min(u*8, (1-u)*6), 0, 1);
+    const u = ((T*speed/p.len + i/n + (phase||0)) % 1 + 1) % 1, q = p.at(u), a = clamp(Math.min(u*8, (1-u)*6), 0, 1);
     ctx.globalAlpha = a*.85; circle(q[0], q[1], 22+u*12, '#ff9d5c', '#c85a17', 2.5); ctx.globalAlpha = 1;
   }
 }
@@ -285,7 +285,7 @@ function draw1(){
     for (const x of [300,410,520,630]) { ctx.beginPath(); ctx.moveTo(185+(x-300)*.08,135); ctx.lineTo(x,GY-4); ctx.stroke(); }
     ctx.setLineDash([]);
     cloud(370,30,200,70,'#ffffff');
-    P_SUN.forEach((p,i) => blobs(p, 3, 26, i*.37));
+    P_SUN.forEach((p,i) => blobs(p, 3, 55, i*.37));
     lab('s1a','{太陽|たいよう}',150,180,'yel');
     lab('s1b','あたたまった{地面|じめん}',470,GY+50,'warm');
     lab('s1c','あたたかい{空気|くうき}が{上|あ}がる',820,330,'warm');
@@ -295,7 +295,7 @@ function draw1(){
     ctx.beginPath(); ctx.moveTo(430,GY); ctx.quadraticCurveTo(760,GY-150,1000,GY-390); ctx.lineTo(1000,GY); ctx.closePath();
     ctx.fillStyle = 'rgba(120,170,235,.55)'; ctx.fill(); ctx.strokeStyle = '#2f6fc0'; ctx.lineWidth = 4; ctx.stroke();
     cloud(790,70,200,70,'#ffffff');
-    drawPath(P_FRONT,'rgba(232,116,42,.45)'); blobs(P_FRONT, 6, 30);
+    drawPath(P_FRONT,'rgba(232,116,42,.45)'); blobs(P_FRONT, 6, 80);
     lab('s1a','あたたかい{空気|くうき}',170,420,'warm');
     lab('s1b','{冷|つめ}たい{空気|くうき}',820,470,'cold');
     lab('s1c','{前線|ぜんせん}',430,GY+48,'');
@@ -305,14 +305,14 @@ function draw1(){
     ctx.beginPath(); ctx.moveTo(470,GY); ctx.lineTo(735,190); ctx.lineTo(1000,GY); ctx.closePath();
     ctx.fillStyle = '#b9a27c'; ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.stroke();
     cloud(700,40,210,70,'#ffffff');
-    drawPath(P_MOUNT,'rgba(232,116,42,.45)'); blobs(P_MOUNT, 6, 30);
+    drawPath(P_MOUNT,'rgba(232,116,42,.45)'); blobs(P_MOUNT, 6, 80);
     lab('s1a','しめった{空気|くうき}',170,410,'warm');
     lab('s1b','{山|やま}',760,440,'');
     lab('s1c','{斜面|しゃめん}にそって{上|あ}がる',400,250,'warm');
   } else {
     ground();
     cloud(390,30,220,76,'#ffffff');
-    P_LOW.forEach(p => { drawPath(p,'rgba(232,116,42,.45)'); blobs(p, 4, 30); });
+    P_LOW.forEach(p => { drawPath(p,'rgba(232,116,42,.45)'); blobs(p, 4, 55); });
     circle(500,GY+2,34,'#ff6b5e',INK,3);
     lab('s1a','{低|てい}',500,GY+2,'plain big');
     lab('s1b','{空気|くうき}が{集|あつ}まる',210,440,'warm');
